@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon portefeuille — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html">Fichiers</a>
+        <a href="televerser.html">Téléverser</a>
+        <a href="portefeuille.html" class="active">Portefeuille</a>
+        <a href="mon-compte.html">Mon compte</a>
+        <a href="collections.html">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 640px;">
+      <h1>Mon portefeuille</h1>
+      <p class="text-muted mb-2">Votre portefeuille virtuel sert à payer votre abonnement premium. Un compte premium ou non : l'achat d'un abonnement déduit le coût de votre solde et active le compte premium.</p>
+
+      <div id="alert-container"></div>
+
+      <div class="card">
+        <h2 class="card-title">Votre compte</h2>
+        <p class="card-meta">Compte premium : <strong id="statut-premium">Non</strong></p>
+        <p class="text-muted">Souscrivez à un abonnement pour passer en compte premium.</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Solde actuel</h2>
+        <p class="card-meta" id="solde-affichage">25,00 $</p>
+        <p class="text-muted">Méthode de paiement enregistrée : Carte ****1234</p>
+      </div>
+
+      <section class="card">
+        <h2>Ajouter des fonds</h2>
+        <form id="form-fonds" novalidate>
+          <div class="form-group">
+            <label for="montant">Montant à ajouter</label>
+            <input type="number" id="montant" name="montant" min="0" step="0.01" placeholder="0.00" required>
+            <span class="form-error" role="alert"></span>
+          </div>
+          <div class="form-group">
+            <label for="payment_mthd">Méthode de paiement</label>
+            <select id="payment_mthd" name="payment_mthd" required>
+              <option value="">Choisir</option>
+              <option value="carte">Carte bancaire</option>
+              <option value="paypal">PayPal</option>
+            </select>
+            <span class="form-error" role="alert"></span>
+          </div>
+          <button type="submit" class="btn btn-primary">Ajouter au portefeuille</button>
+        </form>
+      </section>
+
+      <section class="card mt-2">
+        <h2>Abonnements achetés</h2>
+        <ul class="card-meta" style="list-style: none; padding: 0;">
+          <li>Abonnement premium — 15,00 $ — 10/03/2025</li>
+          <li>Abonnement premium — 15,00 $ — 08/02/2025</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="fichiers.html">Fichiers</a>
+      <a href="mon-compte.html">Mon compte</a>
+    </div>
+  </footer>
+
+  <script src="js/validation.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var form = document.getElementById('form-fonds');
+      var alertContainer = document.getElementById('alert-container');
+      var montantEl = form && form.querySelector('#montant');
+      var paymentEl = form && form.querySelector('#payment_mthd');
+      var soldeEl = document.getElementById('solde-affichage');
+
+      var soldeActuel = 25.0;
+
+      if (!form || !window.StudyShare || !window.StudyShare.validation) return;
+      var v = window.StudyShare.validation;
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.StudyShare.clearFormErrors(form);
+        while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+        var montantResult = v.validateMontant(montantEl ? montantEl.value : '');
+        var paymentVal = paymentEl ? paymentEl.value : '';
+        var paymentValid = paymentVal.length > 0;
+
+        var hasError = false;
+        if (!montantResult.valid) { window.StudyShare.setFieldError(montantEl, montantResult.message); hasError = true; }
+        if (!paymentValid) { window.StudyShare.setFieldError(paymentEl, 'Veuillez sélectionner une méthode de paiement.'); hasError = true; }
+
+        if (hasError) {
+          var alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-error';
+          alertDiv.setAttribute('role', 'alert');
+          alertDiv.textContent = 'Veuillez corriger les erreurs ci-dessous.';
+          alertContainer.appendChild(alertDiv);
+          return;
+        }
+
+        try {
+          var ajout = parseFloat(String(montantEl.value).replace(',', '.'));
+          soldeActuel += ajout;
+          if (soldeEl) soldeEl.textContent = soldeActuel.toFixed(2) + ' $';
+          window.StudyShare.showAlert('Fonds ajoutés avec succès.', 'success', alertContainer);
+          form.reset();
+        } catch (err) {
+          window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

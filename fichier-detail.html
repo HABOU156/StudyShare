@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Détail du document — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html" class="active">Fichiers</a>
+        <a href="televerser.html">Téléverser</a>
+        <a href="portefeuille.html">Portefeuille</a>
+        <a href="collections.html">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 720px;">
+      <div id="alert-container"></div>
+      <p class="mb-2"><a href="fichiers.html">← Retour aux fichiers</a></p>
+
+      <article class="card mb-2">
+        <span class="file-type-badge file-type-cours" id="badge-type">Cours</span>
+        <h1 id="doc-title">Introduction à la base de données</h1>
+        <p class="card-meta">Cours : <span id="doc-cours">BDD 101</span> — Mis en ligne le <span id="doc-date">12/03/2025</span></p>
+        <p class="card-meta">Note moyenne : <span class="stars" id="doc-note" aria-label="Note : 4 sur 5">★★★★☆</span></p>
+        <div class="flex gap-2 mt-2">
+          <button type="button" class="btn btn-primary" id="btn-download">Télécharger</button>
+        </div>
+      </article>
+
+      <section class="card">
+        <h2>Laisser un avis</h2>
+        <p class="text-muted">Votre avis aide les autres à choisir les meilleures ressources. Note 1 à 5 et commentaire.</p>
+        <form id="form-review" novalidate>
+          <div class="form-group">
+            <label for="review-note">Note 1 à 5</label>
+            <select id="review-note" name="note" required>
+              <option value="">Choisir</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+            <span class="form-error" role="alert"></span>
+          </div>
+          <div class="form-group">
+            <label for="review-titre">Titre du commentaire</label>
+            <input type="text" id="review-titre" name="titre" maxlength="200" placeholder="Court résumé de votre avis">
+            <span class="form-error" role="alert"></span>
+          </div>
+          <div class="form-group">
+            <label for="review-comment">Commentaire</label>
+            <textarea id="review-comment" name="comment" rows="4" maxlength="2000" placeholder="Décrivez votre expérience avec ce document."></textarea>
+            <span class="form-error" role="alert"></span>
+          </div>
+          <button type="submit" class="btn btn-primary">Publier l'avis</button>
+        </form>
+      </section>
+
+      <section class="card mt-2">
+        <h2>Avis des utilisateurs</h2>
+        <div id="reviews-list">
+          <p class="card-meta">Très bon résumé, clair et complet. ★★★★☆ — 14/03/2025</p>
+          <p class="card-meta">Utile pour réviser l'examen. ★★★★★ — 13/03/2025</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="fichiers.html">Fichiers</a>
+      <a href="connexion.html">Connexion</a>
+    </div>
+  </footer>
+
+  <script src="js/validation.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var form = document.getElementById('form-review');
+      var alertContainer = document.getElementById('alert-container');
+      var noteEl = form && form.querySelector('#review-note');
+      var titreEl = form && form.querySelector('#review-titre');
+      var commentEl = form && form.querySelector('#review-comment');
+
+      var params = new URLSearchParams(window.location.search);
+      var fileId = params.get('id') || '';
+
+      if (form && window.StudyShare && window.StudyShare.validation) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var v = window.StudyShare.validation;
+          window.StudyShare.clearFormErrors(form);
+          while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+          var noteResult = v.validateNote(noteEl ? noteEl.value : '');
+          var titreResult = v.validateTitre(titreEl ? titreEl.value : '', false);
+          var commentResult = v.validateComment(commentEl ? commentEl.value : '', false);
+
+          var hasError = false;
+          if (!noteResult.valid) { window.StudyShare.setFieldError(noteEl, noteResult.message); hasError = true; }
+          if (!titreResult.valid) { window.StudyShare.setFieldError(titreEl, titreResult.message); hasError = true; }
+          if (!commentResult.valid) { window.StudyShare.setFieldError(commentEl, commentResult.message); hasError = true; }
+
+          if (hasError) {
+            var alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-error';
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.textContent = 'Veuillez corriger les erreurs ci-dessous.';
+            alertContainer.appendChild(alertDiv);
+            return;
+          }
+
+          try {
+            if (window.StudyShare.showAlert) {
+              window.StudyShare.showAlert('Avis enregistré.', 'success', alertContainer);
+            }
+            form.reset();
+          } catch (err) {
+            if (window.StudyShare.showAlert) {
+              window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
+            }
+          }
+        });
+      }
+
+      if (document.getElementById('btn-download')) {
+        document.getElementById('btn-download').addEventListener('click', function () {
+          if (window.StudyShare && window.StudyShare.showAlert) {
+            window.StudyShare.showAlert('Téléchargement.', 'info', alertContainer);
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

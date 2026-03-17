@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mes collections — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html">Fichiers</a>
+        <a href="televerser.html">Téléverser</a>
+        <a href="portefeuille.html">Portefeuille</a>
+        <a href="mon-compte.html">Mon compte</a>
+        <a href="collections.html" class="active">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 720px;">
+      <h1>Mes collections</h1>
+      <p class="text-muted mb-2">Créez des collections et ajoutez-y des fichiers. Cliquez sur une collection pour y accéder.</p>
+
+      <div id="alert-container"></div>
+
+      <section class="card">
+        <h2>Créer une collection</h2>
+        <form id="form-collection" novalidate>
+          <div class="form-group">
+            <label for="nom-collection">Nom de la collection</label>
+            <input type="text" id="nom-collection" name="nom" maxlength="100" required placeholder="Ex. Révision BDD">
+            <span class="form-error" role="alert"></span>
+          </div>
+          <button type="submit" class="btn btn-primary">Créer la collection</button>
+        </form>
+      </section>
+
+      <section class="card mt-2">
+        <h2>Vos collections</h2>
+        <div id="collections-list" class="files-grid">
+          <a href="collection-detail.html?id=1" class="file-card">
+            <div class="card">
+              <h3 class="card-title">Révision examens</h3>
+              <p class="card-meta">Créée le 10/03/2025</p>
+              <p class="card-meta"><strong>3</strong> fichiers</p>
+            </div>
+          </a>
+          <a href="collection-detail.html?id=2" class="file-card">
+            <div class="card">
+              <h3 class="card-title">Cours BDD</h3>
+              <p class="card-meta">Créée le 05/03/2025</p>
+              <p class="card-meta"><strong>5</strong> fichiers</p>
+            </div>
+          </a>
+        </div>
+        <p id="no-collections" class="text-muted text-center mt-2" style="display: none;">Aucune collection. Créez-en une ci-dessus.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="fichiers.html">Fichiers</a>
+      <a href="connexion.html">Connexion</a>
+    </div>
+  </footer>
+
+  <script src="js/validation.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var form = document.getElementById('form-collection');
+      var alertContainer = document.getElementById('alert-container');
+      var nomEl = form && form.querySelector('#nom-collection');
+      var listEl = document.getElementById('collections-list');
+      var noCollections = document.getElementById('no-collections');
+
+      var collections = [
+        { id: 1, nom: 'Révision examens', dateCreation: '2025-03-10', nbFichiers: 3 },
+        { id: 2, nom: 'Cours BDD', dateCreation: '2025-03-05', nbFichiers: 5 }
+      ];
+
+      function formatDate(str) {
+        if (!str) return '';
+        var d = new Date(str);
+        return isNaN(d.getTime()) ? str : d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function renderCollections() {
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        if (collections.length === 0) {
+          if (noCollections) noCollections.style.display = 'block';
+          return;
+        }
+        if (noCollections) noCollections.style.display = 'none';
+        collections.forEach(function (c) {
+          var a = document.createElement('a');
+          a.href = 'collection-detail.html?id=' + encodeURIComponent(c.id);
+          a.className = 'file-card';
+          a.innerHTML = '<div class="card">' +
+            '<h3 class="card-title">' + escapeHtml(c.nom) + '</h3>' +
+            '<p class="card-meta">Créée le ' + formatDate(c.dateCreation) + '</p>' +
+            '<p class="card-meta"><strong>' + c.nbFichiers + '</strong> fichiers</p>' +
+            '</div>';
+          listEl.appendChild(a);
+        });
+      }
+
+      if (form && window.StudyShare && window.StudyShare.validation) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          window.StudyShare.clearFormErrors(form);
+          while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+          var result = window.StudyShare.validation.validateNomGroupe(nomEl ? nomEl.value : '');
+          if (!result.valid) {
+            window.StudyShare.setFieldError(nomEl, result.message);
+            var d = document.createElement('div');
+            d.className = 'alert alert-error';
+            d.textContent = 'Veuillez corriger les erreurs.';
+            alertContainer.appendChild(d);
+            return;
+          }
+
+          try {
+            var nom = nomEl.value.trim();
+            var dateStr = new Date().toISOString().slice(0, 10);
+            var newId = collections.length ? Math.max.apply(null, collections.map(function (c) { return c.id; })) + 1 : 1;
+            collections.unshift({ id: newId, nom: nom, dateCreation: dateStr, nbFichiers: 0 });
+            renderCollections();
+            window.StudyShare.showAlert('Collection créée.', 'success', alertContainer);
+            form.reset();
+          } catch (err) {
+            window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
+          }
+        });
+      }
+
+      renderCollections();
+    })();
+  </script>
+</body>
+</html>

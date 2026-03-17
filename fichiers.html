@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fichiers — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html" class="active">Fichiers</a>
+        <a href="televerser.html">Téléverser</a>
+        <a href="portefeuille.html">Portefeuille</a>
+        <a href="collections.html">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <h1>Documents partagés</h1>
+      <p class="text-muted mb-2">Parcourez les cours, résumés, examens et exercices mis en ligne par les étudiants. Filtrez par type, cours ou date.</p>
+
+      <div class="filters-bar">
+        <div class="form-group">
+          <label for="filter-type">Type</label>
+          <select id="filter-type">
+            <option value="">Tous</option>
+            <option value="Cours">Cours</option>
+            <option value="Résumé">Résumé</option>
+            <option value="Examen">Examen</option>
+            <option value="Exercices">Exercices</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="filter-cours">Cours</label>
+          <input type="text" id="filter-cours" placeholder="Nom du cours">
+        </div>
+        <div class="form-group">
+          <label for="filter-date">Tri par date</label>
+          <select id="filter-date">
+            <option value="recent">Plus récents</option>
+            <option value="ancien">Plus anciens</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-filter">Filtrer</button>
+        <button type="button" class="btn btn-secondary" id="btn-reset">Réinitialiser</button>
+      </div>
+
+      <div id="files-list" class="files-grid">
+        <a href="fichier-detail.html?id=1" class="file-card">
+          <div class="card">
+            <span class="file-type-badge file-type-cours">Cours</span>
+            <h3 class="card-title">Introduction à la base de données</h3>
+            <p class="card-meta">BDD 101 — Mis en ligne le 12/03/2025</p>
+            <p class="stars" aria-label="Note : 4 sur 5">★★★★☆</p>
+          </div>
+        </a>
+        <a href="fichier-detail.html?id=2" class="file-card">
+          <div class="card">
+            <span class="file-type-badge file-type-resume">Résumé</span>
+            <h3 class="card-title">Résumé chapitres 1-5</h3>
+            <p class="card-meta">Algèbre linéaire — Mis en ligne le 10/03/2025</p>
+            <p class="stars" aria-label="Note : 5 sur 5">★★★★★</p>
+          </div>
+        </a>
+        <a href="fichier-detail.html?id=3" class="file-card">
+          <div class="card">
+            <span class="file-type-badge file-type-examen">Examen</span>
+            <h3 class="card-title">Examen partiel 2024</h3>
+            <p class="card-meta">Programmation — Mis en ligne le 08/03/2025</p>
+            <p class="stars" aria-label="Note : 3 sur 5">★★★☆☆</p>
+          </div>
+        </a>
+        <a href="fichier-detail.html?id=4" class="file-card">
+          <div class="card">
+            <span class="file-type-badge file-type-exercices">Exercices</span>
+            <h3 class="card-title">Série 3 avec solutions</h3>
+            <p class="card-meta">Analyse — Mis en ligne le 05/03/2025</p>
+            <p class="stars" aria-label="Note : 4 sur 5">★★★★☆</p>
+          </div>
+        </a>
+      </div>
+
+      <p id="no-results" class="text-muted text-center mt-2" style="display: none;">Aucun document ne correspond à vos critères.</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="index.html">Accueil</a>
+      <a href="televerser.html">Téléverser</a>
+      <a href="connexion.html">Connexion</a>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var filesData = [
+        { id: 1, type: 'Cours', titre: 'Introduction à la base de données', cours: 'BDD 101', date: '2025-03-12', note: 4 },
+        { id: 2, type: 'Résumé', titre: 'Résumé chapitres 1-5', cours: 'Algèbre linéaire', date: '2025-03-10', note: 5 },
+        { id: 3, type: 'Examen', titre: 'Examen partiel 2024', cours: 'Programmation', date: '2025-03-08', note: 3 },
+        { id: 4, type: 'Exercices', titre: 'Série 3 avec solutions', cours: 'Analyse', date: '2025-03-05', note: 4 }
+      ];
+
+      var typeSelect = document.getElementById('filter-type');
+      var coursInput = document.getElementById('filter-cours');
+      var dateSelect = document.getElementById('filter-date');
+      var btnFilter = document.getElementById('btn-filter');
+      var btnReset = document.getElementById('btn-reset');
+      var filesList = document.getElementById('files-list');
+      var noResults = document.getElementById('no-results');
+
+      function formatDate(str) {
+        if (!str) return '';
+        var d = new Date(str);
+        return isNaN(d.getTime()) ? str : d.toLocaleDateString('fr-CA');
+      }
+
+      function renderFiles(list) {
+        if (!filesList) return;
+        filesList.innerHTML = '';
+        if (list.length === 0) {
+          if (noResults) noResults.style.display = 'block';
+          return;
+        }
+        if (noResults) noResults.style.display = 'none';
+        var typeClass = {
+          'Cours': 'file-type-cours',
+          'Résumé': 'file-type-resume',
+          'Examen': 'file-type-examen',
+          'Exercices': 'file-type-exercices'
+        };
+        list.forEach(function (f) {
+          var a = document.createElement('a');
+          a.href = 'fichier-detail.html?id=' + encodeURIComponent(f.id);
+          a.className = 'file-card';
+          var stars = '★'.repeat(f.note) + '☆'.repeat(5 - f.note);
+          a.innerHTML = '<div class="card">' +
+            '<span class="file-type-badge ' + (typeClass[f.type] || '') + '">' + escapeHtml(f.type) + '</span>' +
+            '<h3 class="card-title">' + escapeHtml(f.titre) + '</h3>' +
+            '<p class="card-meta">' + escapeHtml(f.cours) + ' — Mis en ligne le ' + formatDate(f.date) + '</p>' +
+            '<p class="stars" aria-label="Note : ' + f.note + ' sur 5">' + stars + '</p>' +
+            '</div>';
+          filesList.appendChild(a);
+        });
+      }
+
+      function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function applyFilters() {
+        var type = typeSelect ? typeSelect.value.trim() : '';
+        var cours = coursInput ? coursInput.value.trim().toLowerCase() : '';
+        var order = dateSelect ? dateSelect.value : 'recent';
+        var filtered = filesData.filter(function (f) {
+          if (type && f.type !== type) return false;
+          if (cours && f.cours.toLowerCase().indexOf(cours) === -1) return false;
+          return true;
+        });
+        filtered.sort(function (a, b) {
+          return order === 'recent' ? (b.date.localeCompare(a.date)) : (a.date.localeCompare(b.date));
+        });
+        renderFiles(filtered);
+      }
+
+      function resetFilters() {
+        if (typeSelect) typeSelect.value = '';
+        if (coursInput) coursInput.value = '';
+        if (dateSelect) dateSelect.value = 'recent';
+        renderFiles(filesData);
+      }
+
+      if (btnFilter) btnFilter.addEventListener('click', applyFilters);
+      if (btnReset) btnReset.addEventListener('click', resetFilters);
+    })();
+  </script>
+</body>
+</html>

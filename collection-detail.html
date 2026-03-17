@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collection — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html">Fichiers</a>
+        <a href="televerser.html">Téléverser</a>
+        <a href="portefeuille.html">Portefeuille</a>
+        <a href="mon-compte.html">Mon compte</a>
+        <a href="collections.html" class="active">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 720px;">
+      <div id="alert-container"></div>
+      <p class="mb-2"><a href="collections.html">← Retour aux collections</a></p>
+
+      <article class="card mb-2">
+        <h1 id="collection-nom">Révision examens</h1>
+        <p class="card-meta">Créée le <span id="collection-date">10/03/2025</span></p>
+        <p class="card-meta"><strong id="collection-count">3</strong> fichiers dans cette collection</p>
+        <div class="mt-2">
+          <button type="button" class="btn btn-primary" id="btn-ajouter-fichier">Ajouter des fichiers à cette collection</button>
+        </div>
+      </article>
+
+      <section class="card">
+        <h2>Fichiers dans la collection</h2>
+        <ul id="fichiers-collection" class="card-meta" style="list-style: none; padding: 0;">
+          <li><a href="fichier-detail.html?id=1">Introduction à la base de données</a> — Cours — BDD 101</li>
+          <li><a href="fichier-detail.html?id=3">Examen partiel 2024</a> — Examen — Programmation</li>
+          <li><a href="fichier-detail.html?id=2">Résumé chapitres 1-5</a> — Résumé — Algèbre linéaire</li>
+        </ul>
+        <p id="no-fichiers" class="text-muted" style="display: none;">Aucun fichier dans cette collection. Cliquez sur « Ajouter des fichiers » pour en ajouter.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="collections.html">Collections</a>
+      <a href="fichiers.html">Fichiers</a>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var params = new URLSearchParams(window.location.search);
+      var collectionId = params.get('id');
+
+      var collectionsData = {
+        '1': {
+          nom: 'Révision examens',
+          dateCreation: '2025-03-10',
+          fichiers: [
+            { fid: 1, titre: 'Introduction à la base de données', type: 'Cours', cours: 'BDD 101' },
+            { fid: 3, titre: 'Examen partiel 2024', type: 'Examen', cours: 'Programmation' },
+            { fid: 2, titre: 'Résumé chapitres 1-5', type: 'Résumé', cours: 'Algèbre linéaire' }
+          ]
+        },
+        '2': {
+          nom: 'Cours BDD',
+          dateCreation: '2025-03-05',
+          fichiers: [
+            { fid: 1, titre: 'Introduction à la base de données', type: 'Cours', cours: 'BDD 101' },
+            { fid: 4, titre: 'Série 3 avec solutions', type: 'Exercices', cours: 'Analyse' }
+          ]
+        }
+      };
+
+      function formatDate(str) {
+        if (!str) return '';
+        var d = new Date(str);
+        return isNaN(d.getTime()) ? str : d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      var data = collectionId ? collectionsData[collectionId] : null;
+      if (data) {
+        document.getElementById('collection-nom').textContent = data.nom;
+        document.getElementById('collection-date').textContent = formatDate(data.dateCreation);
+        document.getElementById('collection-count').textContent = data.fichiers.length;
+        var listEl = document.getElementById('fichiers-collection');
+        var noFichiers = document.getElementById('no-fichiers');
+        if (data.fichiers.length === 0) {
+          if (listEl) listEl.innerHTML = '';
+          if (noFichiers) noFichiers.style.display = 'block';
+        } else {
+          if (noFichiers) noFichiers.style.display = 'none';
+          if (listEl) {
+            listEl.innerHTML = '';
+            data.fichiers.forEach(function (f) {
+              var li = document.createElement('li');
+              li.className = 'mb-2';
+              var a = document.createElement('a');
+              a.href = 'fichier-detail.html?id=' + f.fid;
+              a.textContent = f.titre;
+              li.appendChild(a);
+              li.appendChild(document.createTextNode(' — ' + f.type + ' — ' + f.cours));
+              listEl.appendChild(li);
+            });
+          }
+        }
+      } else {
+        document.getElementById('collection-nom').textContent = 'Collection inconnue';
+        document.getElementById('collection-date').textContent = '—';
+        document.getElementById('collection-count').textContent = '0';
+        document.getElementById('fichiers-collection').innerHTML = '';
+        document.getElementById('no-fichiers').style.display = 'block';
+      }
+
+      document.getElementById('btn-ajouter-fichier').addEventListener('click', function () {
+        if (window.StudyShare && window.StudyShare.showAlert) {
+          window.StudyShare.showAlert('En production : ouverture d\'un choix de fichiers pour les ajouter à cette collection.', 'info', document.getElementById('alert-container'));
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
