@@ -1,0 +1,69 @@
+name: Autograding Tests
+
+'on':
+  - push
+  - workflow_dispatch
+  - repository_dispatch
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: atelier_bd
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysql -h mysql -u root --password=root -e 'SHOW DATABASES;'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE: atelier_bd
+      USER: root
+      PASSWORD: root
+      HOST: mysql
+      PORT: 3306
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env file
+        run: |
+          echo "HOST=${{ env.HOST }}" > .env
+          echo "PORT=${{ env.PORT }}" >> .env
+          echo "USER=${{ env.USER }}" >> .env
+          echo "PASSWORD=${{ env.PASSWORD }}" >> .env
+          echo "DATABASE=${{ env.DATABASE }}" >> .env
+
+      - name: run tests
+        id: run-tests
+        uses: classroom-resources/autograding-python-grader@v1
+        with:
+          timeout: 50
+          max-score: 10
+          setup-command: pip install -r "requirements.txt"
+
+      - name: Autograding Reporter
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          RUN-TESTS_RESULTS: "${{ steps.run-tests.outputs.result }}"
+        with:
+          runners: run-tests
