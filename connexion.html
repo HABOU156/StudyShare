@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html">Fichiers</a>
+        <a href="connexion.html" class="active">Connexion</a>
+        <a href="inscription.html">Inscription</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 420px;">
+      <h1>Connexion</h1>
+      <p class="text-muted mb-2">Connectez-vous pour accéder à votre portefeuille, téléverser des fichiers et noter les documents.</p>
+
+      <form id="form-connexion" class="card" method="post" action="#" novalidate>
+        <div id="alert-container"></div>
+
+        <div class="form-group">
+          <label for="email">Courriel</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="vous@universite.ca">
+          <span class="form-error" role="alert" aria-live="polite"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+          <span class="form-error" role="alert" aria-live="polite"></span>
+        </div>
+
+        <div class="form-group mt-2">
+          <button type="submit" class="btn btn-primary" id="btn-submit">Se connecter</button>
+        </div>
+      </form>
+
+      <p class="text-center mt-2">
+        Pas encore de compte ? <a href="inscription.html">S'inscrire</a>
+      </p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="index.html">Accueil</a>
+      <a href="inscription.html">Inscription</a>
+    </div>
+  </footer>
+
+  <script src="js/validation.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var form = document.getElementById('form-connexion');
+      var alertContainer = document.getElementById('alert-container');
+      var btnSubmit = document.getElementById('btn-submit');
+
+      if (!form) return;
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!window.StudyShare || !window.StudyShare.validation) {
+          return;
+        }
+        var v = window.StudyShare.validation;
+        var emailEl = form.querySelector('#email');
+        var passwordEl = form.querySelector('#password');
+
+        window.StudyShare.clearFormErrors(form);
+        while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+        var emailResult = v.validateEmail(emailEl ? emailEl.value : '');
+        var passwordResult = v.validatePassword(passwordEl ? passwordEl.value : '');
+
+        var hasError = false;
+        if (!emailResult.valid) {
+          window.StudyShare.setFieldError(emailEl, emailResult.message);
+          hasError = true;
+        }
+        if (!passwordResult.valid) {
+          window.StudyShare.setFieldError(passwordEl, passwordResult.message);
+          hasError = true;
+        }
+
+        if (hasError) {
+          var alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-error';
+          alertDiv.setAttribute('role', 'alert');
+          alertDiv.textContent = 'Veuillez corriger les erreurs ci-dessous.';
+          alertContainer.appendChild(alertDiv);
+          return;
+        }
+
+        btnSubmit.disabled = true;
+        try {
+          window.StudyShare.showAlert('Connexion réussie. Redirection…', 'success', alertContainer);
+          setTimeout(function () {
+            window.location.href = 'fichiers.html';
+          }, 1000);
+        } catch (err) {
+          window.StudyShare.showAlert('Une erreur est survenue. Réessayez.', 'error', alertContainer);
+          btnSubmit.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

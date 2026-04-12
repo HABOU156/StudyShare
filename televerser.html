@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Téléverser un document — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html">Fichiers</a>
+        <a href="televerser.html" class="active">Téléverser</a>
+        <a href="portefeuille.html">Portefeuille</a>
+        <a href="collections.html">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 560px;">
+      <h1>Téléverser un document</h1>
+      <p class="text-muted mb-2">Partagez vos cours, résumés, examens ou exercices. Le type et le cours permettent de retrouver facilement le document.</p>
+
+      <form id="form-televerser" class="card" method="post" action="#" enctype="multipart/form-data" novalidate>
+        <div id="alert-container"></div>
+
+        <div class="form-group">
+          <label for="type">Type de document</label>
+          <select id="type" name="type" required>
+            <option value="">Choisir</option>
+            <option value="Cours">Cours</option>
+            <option value="Résumé">Résumé</option>
+            <option value="Examen">Examen</option>
+            <option value="Exercices">Exercices</option>
+          </select>
+          <span class="form-error" role="alert"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="cours">Cours</label>
+          <input type="text" id="cours" name="cours" required maxlength="200" placeholder="Ex. BDD 101">
+          <span class="form-error" role="alert"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="fichier">Fichier</label>
+          <input type="file" id="fichier" name="fichier" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" required>
+          <span class="form-help">PDF, Word, TXT ou images. Max 10 Mo.</span>
+          <span class="form-error" role="alert"></span>
+        </div>
+
+        <div class="form-group mt-2">
+          <button type="submit" class="btn btn-primary" id="btn-submit">Téléverser</button>
+        </div>
+      </form>
+
+      <p class="text-center mt-2"><a href="fichiers.html">Voir les fichiers</a></p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="fichiers.html">Fichiers</a>
+      <a href="connexion.html">Connexion</a>
+    </div>
+  </footer>
+
+  <script src="js/validation.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var form = document.getElementById('form-televerser');
+      var alertContainer = document.getElementById('alert-container');
+      var typeEl = form && form.querySelector('#type');
+      var coursEl = form && form.querySelector('#cours');
+      var fichierEl = form && form.querySelector('#fichier');
+      var btnSubmit = document.getElementById('btn-submit');
+
+      if (!form || !window.StudyShare || !window.StudyShare.validation) return;
+      var v = window.StudyShare.validation;
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.StudyShare.clearFormErrors(form);
+        while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+        var typeResult = v.validateTypeFichier(typeEl ? typeEl.value : '');
+        var coursStr = coursEl ? coursEl.value : '';
+        var coursValid = coursStr.trim().length > 0 && coursStr.length <= 200;
+        var fileResult = v.validateFileUpload(fichierEl && fichierEl.files && fichierEl.files[0]);
+
+        var hasError = false;
+        if (!typeResult.valid) { window.StudyShare.setFieldError(typeEl, typeResult.message); hasError = true; }
+        if (!coursValid) {
+          window.StudyShare.setFieldError(coursEl, !coursStr.trim() ? 'Le cours est requis.' : 'Le nom du cours ne doit pas dépasser 200 caractères.');
+          hasError = true;
+        }
+        if (!fileResult.valid) { window.StudyShare.setFieldError(fichierEl, fileResult.message); hasError = true; }
+
+        if (hasError) {
+          var alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-error';
+          alertDiv.setAttribute('role', 'alert');
+          alertDiv.textContent = 'Veuillez corriger les erreurs ci-dessous.';
+          alertContainer.appendChild(alertDiv);
+          return;
+        }
+
+        btnSubmit.disabled = true;
+        try {
+          window.StudyShare.showAlert('Document téléversé avec succès.', 'success', alertContainer);
+          form.reset();
+        } catch (err) {
+          window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
+        }
+        btnSubmit.disabled = false;
+      });
+    })();
+  </script>
+</body>
+</html>
