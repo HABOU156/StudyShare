@@ -126,3 +126,14 @@ def devenir_premium_db(eid):
         return False
     finally:
         conn.close()
+
+def get_wallet_by_eid(eid):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Note : Dans ton script SQL, wid semble correspondre à l'eid
+        query = "SELECT * FROM Wallets WHERE wid = %s"
+        cursor.execute(query, (eid,))
+        return cursor.fetchone()
+    finally:
+        conn.close()

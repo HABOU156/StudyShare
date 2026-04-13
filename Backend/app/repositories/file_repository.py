@@ -2,28 +2,26 @@ from config import get_db_connection
 
 def create_fichier(titre, lien_access, type_fichier, cid):
     """
-    titre : sera stocké dans lien_access ou une autre colonne si tu en ajoutes une
-    lien_access : le chemin vers le fichier (ex: uploads/devoir.pdf)
-    type_fichier : DOIT être 'Cours', 'Résumé', 'Examen' ou 'Exercices'
-    cid : l'ID du cours existant dans ta table Cours
+    titre : ignoré car absent de la DB actuelle
+    lien_access : le chemin physique
+    type_fichier : ENUM('Cours', 'Résumé', 'Examen', 'Exercices')
+    cid : ID du cours
     """
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # On respecte tes colonnes : lien_access, type, cid
+        # On ajoute 'mise_en_ligne' dans les colonnes et CURDATE() dans les values
         query = """
-            INSERT INTO Fichiers (lien_access, type, cid)
-            VALUES (%s, %s, %s)
+            INSERT INTO Fichiers (lien_access, type, cid, mise_en_ligne)
+            VALUES (%s, %s, %s, CURDATE())
         """
-        # Note : Ta table n'a pas de colonne 'titre', 
-        # donc on insère le chemin et le type pour l'instant.
         values = (lien_access, type_fichier, cid)
         
         cursor.execute(query, values)
         conn.commit()
         return cursor.lastrowid
     except Exception as e:
-        print(f"❌ ERREUR SQL : {e}")
+        print(f"❌ ERREUR SQL : {e}") # Regarde ton terminal pour voir ce message
         return None
     finally:
         conn.close()

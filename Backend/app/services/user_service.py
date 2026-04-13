@@ -67,3 +67,10 @@ def deposer_argent(eid, montant):
     if wallet_repository.update_solde(eid, nouveau_solde):
         return True, f"Dépôt réussi. Nouveau solde : {nouveau_solde}$"
     return False, "Erreur technique lors de la mise à jour"
+
+def obtenir_portefeuille(eid):
+    # On va chercher dans le repository si le wallet existe
+    wallet = user_repository.get_wallet_by_eid(eid)
+    if wallet:
+        return wallet, "Succès"
+    return None, "Portefeuille introuvable"
