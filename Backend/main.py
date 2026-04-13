@@ -4,6 +4,8 @@ from app.routes.user_routes import user_bp
 from app.routes.wallet_routes import wallet_bp
 from app.routes.file_routes import file_bp
 import os
+
+#debug pr blueprint fichier 
 try:
     from app.routes.file_routes import file_bp
     print("✅ Blueprint Fichier chargé avec succès")
