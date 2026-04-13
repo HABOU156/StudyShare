@@ -63,6 +63,50 @@ CREATE TABLE IF NOT EXISTS Abonnements (aid int,
 					PRIMARY KEY (aid),
 					CONSTRAINT FK_A_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid));
 
+DELIMITER //
+
+CREATE TRIGGER ajoutAbonnement
+BEFORE INSERT ON Abonnements
+FOR EACH ROW
+BEGIN
+    DECLARE soldeWallet INT;
+    DECLARE walletExiste INT;
+
+    -- 1. Vérifier que la date de fin est postérieure ou égale à la date de début
+    IF NEW.date_fin < NEW.date_debut THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Erreur: la date de fin doit etre posterieure ou egale a la date de debut.';
+    END IF;
+
+    -- 2. Vérifier l'existence d'un portefeuille pour cet étudiant.
+    SELECT COUNT(*) INTO walletExiste
+    FROM Wallets
+    WHERE wid = NEW.eid;
+
+    IF walletExiste = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Erreur: aucun portefeuille trouve pour etudiant';
+    END IF;
+
+    -- 3. Lire le solde actuel du portefeuille
+    SELECT solde INTO soldeWallet
+    FROM Wallets
+    WHERE wid = NEW.eid
+    LIMIT 1;
+
+    -- 4. Vérifier que le solde est suffisant pour payer l'abonnement
+    IF soldeWallet IS NULL OR soldeWallet < NEW.cout THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Erreur: solde insuffisant';
+    END IF;
+
+    -- 5. Débiter le coût de l'abonnement du portefeuille
+    UPDATE Wallets
+    SET solde = solde - NEW.cout
+    WHERE wid = NEW.eid;
+END//
+
+DELIMITER ;
 
 INSERT INTO Universite VALUES 
 (1, "University of Toronto"),
