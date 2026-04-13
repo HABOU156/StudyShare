@@ -152,16 +152,16 @@ INSERT INTO Etudiants VALUES
 (50, "Roxane Dubois", 10, "roxane.dubois@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389");
 
 INSERT INTO Fichiers VALUES
-(1,  '/files/IFT-1001_cours.pdf',    'Cours',      1,  '2024-01-10'),
-(2,  '/files/GLO-2002_resume.pdf',   'Résumé',     2,  '2024-01-18'),
-(3,  '/files/GIF-3003_examen.pdf',   'Examen',     3,  '2024-02-01'),
-(4,  '/files/IFT-4004_exercices.pdf', 'Exercices',  4,  '2024-02-15'),
-(5,  '/files/GLO-5005_cours.pdf',    'Cours',      5,  '2024-03-05'),
-(6,  '/files/GIF-6006_resume.pdf',   'Résumé',     6,  '2024-03-20'),
-(7,  '/files/IFT-7007_examen.pdf',   'Examen',     7,  '2024-04-02'),
-(8,  '/files/GLO-8008_exercices.pdf', 'Exercices',  8,  '2024-04-12'),
-(9,  '/files/GIF-9009_cours.pdf',    'Cours',      9,  '2024-04-22'),
-(10, '/files/IFT-1000_resume.pdf',   'Résumé',     10, '2024-05-01');
+(1,  'fichiers/IFT-1001_cours.pdf',    'Cours',      1,  '2024-01-10'),
+(2,  'fichiers/GLO-2002_resume.pdf',   'Résumé',     2,  '2024-01-18'),
+(3,  'fichiers/GIF-3003_examen.pdf',   'Examen',     3,  '2024-02-01'),
+(4,  'fichiers/IFT-4004_exercices.pdf', 'Exercices',  4,  '2024-02-15'),
+(5,  'fichiers/GLO-5005_cours.pdf',    'Cours',      5,  '2024-03-05'),
+(6,  'fichiers/GIF-6006_resume.pdf',   'Résumé',     6,  '2024-03-20'),
+(7,  'fichiers/IFT-7007_examen.pdf',   'Examen',     7,  '2024-04-02'),
+(8,  'fichiers/GLO-8008_exercices.pdf', 'Exercices',  8,  '2024-04-12'),
+(9,  'fichiers/GIF-9009_cours.pdf',    'Cours',      9,  '2024-04-22'),
+(10, 'fichiers/IFT-1000_resume.pdf',   'Résumé',     10, '2024-05-01');
 
 INSERT INTO Wallets VALUES
 (1,  87, 'Google Pay'),
