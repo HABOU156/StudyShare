@@ -36,7 +36,7 @@
       method: opts.method || 'GET',
       headers: headers,
       body: opts.body,
-      credentials: 'omit'
+      credentials: 'include'
     }).then(function (res) {
       return parseJsonSafe(res).then(function (data) {
         if (!res.ok) {
@@ -151,7 +151,7 @@
 
     uploadFichier: function (formData) {
       var url = getBase() + '/api/fichiers/upload';
-      return fetch(url, { method: 'POST', body: formData, credentials: 'omit' }).then(function (res) {
+      return fetch(url, { method: 'POST', body: formData, credentials: 'include' }).then(function (res) {
         return parseJsonSafe(res).then(function (data) {
           if (!res.ok) {
             var err = new Error((data && data.message) || 'Échec du téléversement');
@@ -181,6 +181,10 @@
 
     previewUrlPourFid: function (fid) {
       return getBase() + '/api/fichiers/' + encodeURIComponent(fid) + '/preview';
+    },
+
+    seDesabonner: function () {
+      return requestJson('/api/se-desabonner', { method: 'POST' });
     }
   };
 })();

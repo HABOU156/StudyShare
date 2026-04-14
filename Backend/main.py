@@ -6,22 +6,36 @@ from app.routes.wallet_routes import wallet_bp
 from app.routes.file_routes import file_bp
 import os
 import socket
+from decimal import Decimal
+from datetime import date, datetime
 
 from werkzeug.utils import safe_join
 
 
-
-# --- PATCH DE SÉCURITÉ POUR LES BYTES ---
+# --- PATCH JSON : bytes, Decimal et date MySQL ---
 class UpdatedJSONProvider(DefaultJSONProvider):
     def default(self, obj):
         if isinstance(obj, bytes):
             return obj.decode('utf-8')
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
         return super().default(obj)
-# ----------------------------------------
+# -------------------------------------------------
 
 app = Flask(__name__)
-app.json = UpdatedJSONProvider(app) # On injecte le traducteur ici
-CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = False #false pr test en local sinon true pour prod 
+app.json = UpdatedJSONProvider(app) 
+app.secret_key = 'etudiant_laval_secret_2026_key'
+CORS(app, resources={r"/api/*": {
+    "origins": ["http://127.0.0.1:*", "http://localhost:*"], # Autorise tes ports locaux
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type"],
+    "supports_credentials": True},
+}, supports_credentials=True)
 
 # Dossier racine du dépôt (parent de Backend/) — pages HTML, css/, js/
 FRONTEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

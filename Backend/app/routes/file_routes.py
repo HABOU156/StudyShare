@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from app.services import file_service
+from app.routes.user_routes import login_required
 
 file_bp = Blueprint('file_bp', __name__)
 
@@ -48,6 +49,7 @@ def lister_cours():
     return jsonify({"status": "success", "cours": cours}), 200
 
 @file_bp.route('/api/fichiers/download/<filename>', methods=['GET'])
+@login_required
 def download_fichier(filename):
     response = file_service.recuperer_fichier_physique(filename)
     if response:
@@ -56,20 +58,36 @@ def download_fichier(filename):
 
 
 @file_bp.route('/api/fichiers/<int:fid>/download', methods=['GET'])
+@login_required
 def download_fichier_par_fid(fid):
+    eid = session['user_id']
+    from app.services import user_service
+    acces_ok, message = user_service.verifier_et_enregistrer_acces(eid, fid)
+    
+    if not acces_ok:
+        return jsonify({"status": "error", "message": message}), 403
+    
     response = file_service.recuperer_fichier_par_fid(fid)
     if response:
         return response
-    return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404
+    return jsonify({"status": "error", "message": "Fichier introuvable"}), 404
+
 
 
 
 @file_bp.route('/api/fichiers/<int:fid>/preview', methods=['GET'])
+@login_required 
 def preview_fichier_par_fid(fid):
+    eid = session['user_id']
+    from app.services import user_service
+    acces_ok, message = user_service.verifier_et_enregistrer_acces(eid, fid)
+    if not acces_ok:
+        return jsonify({"status": "error", "message": message}), 403
+    
     response = file_service.recuperer_fichier_par_fid(fid, as_attachment=False)
     if response:
         return response
-    return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404
+    return jsonify({"status": "error", "message": "Fichier introuvable"}), 404
 
 @file_bp.route('/api/fichiers/recherche', methods=['GET'])
 def rechercher_fichiers():

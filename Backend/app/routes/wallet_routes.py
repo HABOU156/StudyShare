@@ -18,8 +18,8 @@ def ajouter_fonds():
     eid = data.get('eid')
     montant = data.get('montant')
 
-    if not eid or montant is None or montant <= 0:
-        return jsonify({"status": "error", "message": "Données invalides"}), 400
+    if not eid or montant is None or float(montant) <= 0:
+        return jsonify({"status": "error", "message": "Le montant doit être supérieur à 0."}), 400
 
     succes, message = user_service.deposer_argent(eid, montant)
     

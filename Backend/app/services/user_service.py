@@ -1,12 +1,12 @@
 from app.repositories import user_repository, wallet_repository
 
 
-#acess fichier 
+#acess fichier
 def demander_acces_fichier(eid, fid):
     # Logique d'affaire : on vérifie la limite avant d'appeler le repo
     if not user_repository.peut_acceder_fichier(eid):
         return False, "Limite de 5 fichiers atteinte. Passez à Premium !"
-    
+
     return user_repository.enregistrer_acces_fichier(eid, fid)
 
 
@@ -15,14 +15,12 @@ def inscrire_etudiant(nom, courriel, password, uid_universite):
     # Logique d'affaire : On pourrait vérifier ici si le courriel finit par @ulaval.ca
     if not courriel or "@" not in courriel:
         return None, "Courriel invalide"
-    
+
     user_id = user_repository.create_etudiant(nom, courriel, password, uid_universite)
-    
+
     if user_id:
         return user_id, "Inscription réussie"
     return None, "Erreur lors de la création du compte"
-
-from app.repositories import user_repository
 
 def authentifier_etudiant(courriel, password):
     # On demande au repository de chercher l'utilisateur et de vérifier le hash
@@ -93,3 +91,35 @@ def obtenir_portefeuille(eid):
     if wallet:
         return wallet, "Succès"
     return None, "Portefeuille introuvable"
+
+def annuler_premium(eid):
+    succes = user_repository.annuler_premium_db(eid)
+    if succes:
+        return True, "Abonnement Premium annulé."
+    return False, "Erreur lors de l'annulation."
+
+def verifier_et_enregistrer_acces(eid, fid):
+    try:
+        user = user_repository.get_user_by_id(eid)
+        if not user:
+            return False, "Utilisateur introuvable."
+
+        # Premium → accès illimité, pas besoin d'enregistrer dans Acceder
+        if user['premium'] == 1:
+            return True, "Accès illimité Premium."
+
+        # Fichier déjà visité → accès gratuit, quota intact
+        if user_repository.a_deja_accede(eid, fid):
+            return True, "Fichier déjà consulté."
+
+        # Quota non-premium : max 5 fichiers distincts
+        nb_fichiers = user_repository.compter_fichiers_uniques(eid)
+        if nb_fichiers >= 5:
+            return False, "Quota de 5 fichiers atteint. Passez à Premium !"
+
+        # Tout est OK → enregistrement (le trigger SQL vérifie aussi côté DB)
+        succes, message = user_repository.enregistrer_acces_fichier(eid, fid)
+        return succes, message
+
+    except Exception as e:
+        return False, f"Erreur de vérification : {str(e)}"

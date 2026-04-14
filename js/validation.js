@@ -142,8 +142,8 @@
       return { valid: false, message: 'Le montant est requis.' };
     }
     var num = parseFloat(String(value).replace(',', '.'));
-    if (isNaN(num) || num < 0) {
-      return { valid: false, message: 'Le montant doit être un nombre positif ou zéro.' };
+    if (isNaN(num) || num <= 0) {
+      return { valid: false, message: 'Le montant doit être supérieur à 0.' };
     }
     return { valid: true };
   }

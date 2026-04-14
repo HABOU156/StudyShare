@@ -32,17 +32,17 @@
       <form id="form-compte" class="card" method="post" action="#" novalidate>
         <div class="form-group">
           <label for="nom">Nom</label>
-          <input type="text" id="nom" name="nom" required maxlength="100" value="Jean Dupont" placeholder="Votre nom">
+          <input type="text" id="nom" name="nom" required maxlength="100" value="" placeholder="Chargement…">
           <span class="form-error" role="alert"></span>
         </div>
         <div class="form-group">
           <label for="email">Courriel</label>
-          <input type="email" id="email" name="email" required value="Jean.dupont@Ulaval.ca" placeholder="vous@universite.ca">
+          <input type="email" id="email" name="email" required value="" placeholder="Chargement…">
           <span class="form-error" role="alert"></span>
         </div>
         <div class="form-group">
           <label for="universite">Université</label>
-          <input type="text" id="universite" name="universite" required value="Université Laval" placeholder="Nom de votre université">
+          <input type="text" id="universite" name="universite" value="" placeholder="Chargement…" readonly>
           <span class="form-error" role="alert"></span>
         </div>
         <div class="form-group mt-2">
@@ -83,6 +83,8 @@
     </div>
   </footer>
 
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/validation.js"></script>
   <script src="js/app.js"></script>
   <script>
@@ -94,6 +96,26 @@
 
       if (!window.StudyShare || !window.StudyShare.validation) return;
       var v = window.StudyShare.validation;
+
+      /* Chargement des données réelles depuis le serveur */
+      fetch('/api/mon-compte', { credentials: 'include' })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (!data || data.status !== 'success') {
+            window.StudyShare.showAlert('Connectez-vous pour accéder à votre compte.', 'info', alertContainer);
+            return;
+          }
+          var u = data.user;
+          var nomEl = document.getElementById('nom');
+          var emailEl = document.getElementById('email');
+          var univEl = document.getElementById('universite');
+          if (nomEl) nomEl.value = u.nom || '';
+          if (emailEl) emailEl.value = u.courriel || '';
+          if (univEl) univEl.value = u.nom_universite || '';
+        })
+        .catch(function () {
+          window.StudyShare.showAlert('Impossible de charger les informations du compte.', 'error', alertContainer);
+        });
 
       if (formCompte) {
         formCompte.addEventListener('submit', function (e) {
