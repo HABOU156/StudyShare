@@ -107,6 +107,7 @@
       var docDate = document.getElementById('doc-date');
       var docNote = document.getElementById('doc-note');
       var btnDownload = document.getElementById('btn-download');
+      var reviewsList = document.getElementById('reviews-list');
 
       var params = new URLSearchParams(window.location.search);
       var fileId = params.get('id') || '';
@@ -130,6 +131,55 @@
         var clean = String(lien).split('?')[0];
         var idx = clean.lastIndexOf('.');
         return idx >= 0 ? clean.slice(idx + 1).toLowerCase() : '';
+      }
+
+      function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+      }
+
+      function renderMoyenne(moyenne, totalAvis) {
+        if (!docNote) return;
+        var m = Number(moyenne || 0);
+        var total = Number(totalAvis || 0);
+        if (m > 0 && total > 0) {
+          var stars = '★'.repeat(Math.round(m)) + '☆'.repeat(5 - Math.round(m));
+          docNote.textContent = stars + ' (' + m.toFixed(1) + '/5, ' + total + ' avis)';
+          docNote.setAttribute('aria-label', 'Note moyenne : ' + m.toFixed(1) + ' sur 5, ' + total + ' avis');
+        } else {
+          docNote.textContent = 'Pas encore noté';
+          docNote.setAttribute('aria-label', 'Pas encore noté');
+        }
+      }
+
+      function renderReviews(reviews) {
+        if (!reviewsList) return;
+        if (!reviews || reviews.length === 0) {
+          reviewsList.innerHTML = '<p class="card-meta text-muted">Aucun avis pour le moment.</p>';
+          return;
+        }
+        reviewsList.innerHTML = reviews.map(function (review) {
+          var note = Number(review.note || 0);
+          var stars = note > 0 ? ('★'.repeat(note) + '☆'.repeat(5 - note)) : '—';
+          return '<article class="card mb-2">' +
+            '<h3 class="card-title">' + escapeHtml(review.titre || 'Avis') + '</h3>' +
+            '<p class="card-meta">' + stars + ' — Par ' + escapeHtml(review.nom || 'Utilisateur') + ' le ' + formatDate(review.date_de_mise_enligne) + '</p>' +
+            '<p>' + escapeHtml(review.commentaire || '') + '</p>' +
+            '</article>';
+        }).join('');
+      }
+
+      function chargerReviews() {
+        if (!window.StudyShareApi || !fileId) return;
+        window.StudyShareApi.getReviewsFichier(fileId).then(function (res) {
+          var data = res && res.data ? res.data : {};
+          renderMoyenne(data.moyenne || 0, data.total_avis || 0);
+          renderReviews(data.reviews || []);
+        }).catch(function () {
+          renderReviews([]);
+        });
       }
 
       function renderPreview(fichier) {
@@ -179,16 +229,10 @@
           if (docTitle) docTitle.textContent = mapped.titre;
           if (docCours) docCours.textContent = mapped.cours;
           if (docDate) docDate.textContent = formatDate(mapped.date);
-          if (docNote) {
-            if (mapped.note > 0) {
-              docNote.textContent = '★'.repeat(mapped.note) + '☆'.repeat(5 - mapped.note);
-              docNote.setAttribute('aria-label', 'Note : ' + mapped.note + ' sur 5');
-            } else {
-              docNote.textContent = 'Pas encore noté';
-            }
-          }
+          if (docNote) docNote.textContent = 'Chargement des avis…';
           if (btnDownload) btnDownload.disabled = false;
           renderPreview(f);
+          chargerReviews();
         }).catch(function () {
           if (docTitle) docTitle.textContent = 'Document introuvable';
           window.StudyShare.showAlert('Impossible de charger ce fichier (vérifiez l’ID et l’API).', 'error', alertContainer);
@@ -237,6 +281,7 @@
           }).then(function () {
             window.StudyShare.showAlert('Avis enregistré.', 'success', alertContainer);
             form.reset();
+            chargerReviews();
           }).catch(function (err) {
             window.StudyShare.showAlert(err.message || 'Échec de l’enregistrement.', 'error', alertContainer);
           });
