@@ -52,6 +52,7 @@
         <button type="button" class="btn btn-secondary" id="btn-reset">Réinitialiser</button>
       </div>
 
+      <div id="files-banner" class="mb-2" style="display: none;" role="status"></div>
       <p id="files-loading" class="text-muted mb-2">Chargement des documents depuis le serveur…</p>
       <div id="files-list" class="files-grid"></div>
 
@@ -74,6 +75,21 @@
     (function () {
       'use strict';
       var filesData = [];
+      var usingDemo = false;
+
+      /* Jeu d’exemple aligné sur DB/create_db.sql si la base est vide ou l’API indisponible */
+      var DEMO_FILES = [
+        { id: 1, type: 'Cours', titre: 'IFT-1001 cours', cours: 'IFT-1001', date: '2024-01-10', note: 4 },
+        { id: 2, type: 'Résumé', titre: 'GLO-2002 resume', cours: 'GLO-2002', date: '2024-01-18', note: 4 },
+        { id: 3, type: 'Examen', titre: 'GIF-3003 examen', cours: 'GIF-3003', date: '2024-02-01', note: 3 },
+        { id: 4, type: 'Exercices', titre: 'IFT-4004 exercices', cours: 'IFT-4004', date: '2024-02-15', note: 4 },
+        { id: 5, type: 'Cours', titre: 'GLO-5005 cours', cours: 'GLO-5005', date: '2024-03-05', note: 4 },
+        { id: 6, type: 'Résumé', titre: 'GIF-6006 resume', cours: 'GIF-6006', date: '2024-03-20', note: 3 },
+        { id: 7, type: 'Examen', titre: 'IFT-7007 examen', cours: 'IFT-7007', date: '2024-04-02', note: 4 },
+        { id: 8, type: 'Exercices', titre: 'GLO-8008 exercices', cours: 'GLO-8008', date: '2024-04-12', note: 2 },
+        { id: 9, type: 'Cours', titre: 'GIF-9009 cours', cours: 'GIF-9009', date: '2024-04-22', note: 3 },
+        { id: 10, type: 'Résumé', titre: 'IFT-1000 resume', cours: 'IFT-1000', date: '2024-05-01', note: 4 }
+      ];
 
       var typeSelect = document.getElementById('filter-type');
       var coursInput = document.getElementById('filter-cours');
@@ -83,6 +99,19 @@
       var filesList = document.getElementById('files-list');
       var noResults = document.getElementById('no-results');
       var loadingEl = document.getElementById('files-loading');
+      var bannerEl = document.getElementById('files-banner');
+
+      function showBanner(type, message) {
+        if (!bannerEl) return;
+        bannerEl.style.display = 'block';
+        bannerEl.className = 'mb-2 alert alert-' + (type || 'info');
+        bannerEl.setAttribute('role', 'status');
+        bannerEl.textContent = message;
+      }
+
+      function hideBanner() {
+        if (bannerEl) bannerEl.style.display = 'none';
+      }
 
       function formatDate(str) {
         if (!str) return '';
@@ -94,7 +123,12 @@
         if (!filesList) return;
         filesList.innerHTML = '';
         if (list.length === 0) {
-          if (noResults) noResults.style.display = 'block';
+          if (noResults) {
+            noResults.style.display = 'block';
+            noResults.textContent = filesData.length > 0
+              ? 'Aucun document ne correspond à vos critères.'
+              : 'Aucun document à afficher.';
+          }
           return;
         }
         if (noResults) noResults.style.display = 'none';
@@ -159,11 +193,21 @@
           return window.StudyShareApi.mapFichierPourUi(row);
         }).filter(Boolean);
         if (loadingEl) loadingEl.style.display = 'none';
-        renderFiles(filesData);
-      }).catch(function () {
-        if (loadingEl) {
-          loadingEl.textContent = 'Impossible de charger les fichiers. Démarrez l’API Flask (voir le port dans le terminal) et alignez STUDYSHARE_API_BASE si besoin.';
+        if (filesData.length === 0) {
+          usingDemo = true;
+          filesData = DEMO_FILES.slice();
+          showBanner('info', 'Aucun fichier en base ou connexion MySQL vide — affichage d’exemples (même contenu que create_db.sql). Importez DB/create_db.sql pour voir les vraies données.');
+        } else {
+          usingDemo = false;
+          hideBanner();
         }
+        renderFiles(filesData);
+      }).catch(function (err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        usingDemo = true;
+        filesData = DEMO_FILES.slice();
+        showBanner('error', 'API ou base indisponible — affichage d’exemples. Ouvrez le site via le serveur Flask et vérifiez MySQL. (' + (err && err.message ? err.message : 'erreur réseau') + ')');
+        renderFiles(filesData);
       });
     })();
   </script>
