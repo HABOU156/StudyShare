@@ -1,4 +1,5 @@
 
+
 CREATE TABLE IF NOT EXISTS Universite ( uid int,
 					nom varchar(50),
                     
@@ -62,51 +63,6 @@ CREATE TABLE IF NOT EXISTS Abonnements (aid int,
 					
 					PRIMARY KEY (aid),
 					CONSTRAINT FK_A_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid));
-
-DELIMITER //
-
-CREATE TRIGGER ajoutAbonnement
-BEFORE INSERT ON Abonnements
-FOR EACH ROW
-BEGIN
-    DECLARE soldeWallet INT;
-    DECLARE walletExiste INT;
-
-    -- 1. Vérifier que la date de fin est postérieure ou égale à la date de début
-    IF NEW.date_fin < NEW.date_debut THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Erreur: la date de fin doit etre posterieure ou egale a la date de debut.';
-    END IF;
-
-    -- 2. Vérifier l'existence d'un portefeuille pour cet étudiant.
-    SELECT COUNT(*) INTO walletExiste
-    FROM Wallets
-    WHERE wid = NEW.eid;
-
-    IF walletExiste = 0 THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Erreur: aucun portefeuille trouve pour etudiant';
-    END IF;
-
-    -- 3. Lire le solde actuel du portefeuille
-    SELECT solde INTO soldeWallet
-    FROM Wallets
-    WHERE wid = NEW.eid
-    LIMIT 1;
-
-    -- 4. Vérifier que le solde est suffisant pour payer l'abonnement
-    IF soldeWallet IS NULL OR soldeWallet < NEW.cout THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Erreur: solde insuffisant';
-    END IF;
-
-    -- 5. Débiter le coût de l'abonnement du portefeuille
-    UPDATE Wallets
-    SET solde = solde - NEW.cout
-    WHERE wid = NEW.eid;
-END//
-
-DELIMITER ;
 
 INSERT INTO Universite VALUES 
 (1, "University of Toronto"),
@@ -193,7 +149,57 @@ INSERT INTO Etudiants VALUES
 (47, "Josée Marchand", 7,  "josee.marchand@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
 (48, "Olivier Bouchard", 8,  "olivier.bouchard2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
 (49, "Camille Gendron", 9,  "camille.gendron@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
-(50, "Roxane Dubois", 10, "roxane.dubois@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389");
+(50, "Roxane Dubois", 10, "roxane.dubois@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(51, "Patrick Morel", 11, "patrick.morel@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(52, "Marianne Leduc", 12, "marianne.leduc@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(53, "Olivier Paquet", 13, "olivier.paquet@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(54, "Corinne Lemoine", 14, "corinne.lemoine@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(55, "Benoit Riel", 15, "benoit.riel@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(56, "Hélène Martel", 16, "helene.martel@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(57, "Réjean Poitras", 17, "rejean.poitras@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(58, "Karim Beni", 18, "karim.beni@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(59, "Stéphanie Larrivée", 19, "stephanie.larrivee@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(60, "Daniel Bouchard", 20, "daniel.bouchard@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(61, "Hugo Tremblay", 1, "hugo.tremblay2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(62, "Sylvie Noël", 2, "sylvie.noel@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(63, "Éric Larose", 3, "eric.larose@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(64, "Mireille Bellerose", 4, "mireille.bellerose@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(65, "Luc Tremblay", 5, "luc.tremblay2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(66, "Nathalie Gendron", 6, "nathalie.gendron@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(67, "Yves Dumas", 7, "yves.dumas@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(68, "Véronique Paquin", 8, "veronique.paquin@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(69, "Simon Nadeau", 9, "simon.nadeau@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(70, "Élodie Caron", 10, "elodie.caron@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(71, "Stewart Gauthier", 11, "stewart.gauthier@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(72, "Mylène Couture", 12, "mylene.couture@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(73, "Jean-Luc Beaupré", 13, "jean-luc.beaupre@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(74, "Aude Pelletier", 14, "aude.pelletier2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(75, "Gilles Martineau", 15, "gilles.martineau@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(76, "Noémie Roy", 16, "noemie.roy2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(77, "Régis Fortier", 17, "regis.fortier@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(78, "Lise Côté", 18, "lise.cote2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(79, "Denis Gauthier", 19, "denis.gauthier@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(80, "Arielle Simard", 20, "arielle.simard@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(81, "Loïc Desrochers", 1, "loic.desrochers@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(82, "Mireille Dubé", 2, "mireille.dube@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(83, "Frédéric Normand", 3, "frederic.normand@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(84, "Lydia Parent", 4, "lydia.parent@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(85, "Cédric L'Écuyer", 5, "cedric.lecuyer@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(86, "Maude Simard", 6, "maude.simard2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(87, "Bastien Roche", 7, "bastien.roche@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(88, "Manon Lévesque", 8, "manon.levesque2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(89, "Guillaume Morin", 9, "guillaume.morin@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(90, "Brigitte Langlois", 10, "brigitte.langlois@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(91, "Rébecca Cloutier", 11, "rebecca.cloutier@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(92, "Mathis Bouchard", 12, "mathis.bouchard@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(93, "Coralie Simard", 13, "coralie.simard2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(94, "Adrien Fortin", 14, "adrien.fortin@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(95, "Léna Dubois", 15, "lena.dubois2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(96, "Owen Bélanger", 16, "owen.belanger@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(97, "Camille Roy", 17, "camille.roy2@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(98, "Pascaline Gauthier", 18, "pascaline.gauthier@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(99, "Yannick Proulx", 19, "yannick.proulx@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389"),
+(100,"Violette Roy", 20, "violette.roy@gmail.com", "95e495d9c57d1e80d024e06eeef86b5a108f45454b19ee25110a4710d6f21389");
 
 INSERT INTO Fichiers VALUES
 (1,  'fichiers/IFT-1001_cours.pdf',    'Cours',      1,  '2024-01-10'),
@@ -257,7 +263,57 @@ INSERT INTO Wallets VALUES
 (47, 4,  'Carte de Credit'),
 (48, 92, 'Apple Pay'),
 (49, 40, 'Argent'),
-(50, 17, 'Carte de Debit');
+(50, 17, 'Carte de Debit'),
+(51,  52, 'Google Pay'),
+(52,  6,  'Apple Pay'),
+(53,  88, 'Carte de Credit'),
+(54,  33, 'Carte de Debit'),
+(55,  74, 'Argent'),
+(56,  19, 'Google Pay'),
+(57,  60, 'Carte de Credit'),
+(58,  41, 'Apple Pay'),
+(59,  0,  'Argent'),
+(60,  95, 'Carte de Debit'),
+(61,  27, 'Google Pay'),
+(62,  72, 'Carte de Credit'),
+(63,  15, 'Apple Pay'),
+(64,  46, 'Argent'),
+(65,  9,  'Carte de Debit'),
+(66,  80, 'Google Pay'),
+(67,  36, 'Carte de Credit'),
+(68,  53, 'Apple Pay'),
+(69,  2,  'Argent'),
+(70,  69, 'Carte de Debit'),
+(71,  44, 'Google Pay'),
+(72,  11, 'Carte de Credit'),
+(73,  58, 'Apple Pay'),
+(74,  21, 'Argent'),
+(75,  77, 'Carte de Debit'),
+(76,  5,  'Google Pay'),
+(77,  84, 'Carte de Credit'),
+(78,  30, 'Apple Pay'),
+(79,  63, 'Argent'),
+(80,  48, 'Carte de Debit'),
+(81,  13, 'Google Pay'),
+(82,  90, 'Carte de Credit'),
+(83,  35, 'Apple Pay'),
+(84,  51, 'Argent'),
+(85,  7,  'Carte de Debit'),
+(86,  68, 'Google Pay'),
+(87,  24, 'Carte de Credit'),
+(88,  79, 'Apple Pay'),
+(89,  16, 'Argent'),
+(90,  55, 'Carte de Debit'),
+(91,  37, 'Google Pay'),
+(92,  82, 'Carte de Credit'),
+(93,  20, 'Apple Pay'),
+(94,  61, 'Argent'),
+(95,  4,  'Carte de Debit'),
+(96,  71, 'Google Pay'),
+(97,  29, 'Carte de Credit'),
+(98,  47, 'Apple Pay'),
+(99,  93, 'Argent'),
+(100, 12, 'Carte de Debit');
 
 INSERT INTO Reviews VALUES
 (1,  1,  1,  '2024-01-15', 5),
@@ -309,7 +365,57 @@ INSERT INTO Reviews VALUES
 (47, 38,7,   '2024-12-10', 3),
 (48, 39,8,   '2024-12-18', 5),
 (49, 40,9,   '2025-01-06', 2),
-(50, 41,10,  '2025-01-14', 4);
+(50, 41,10,  '2025-01-14', 4),
+(51, 51, 1, '2025-02-01', 4),
+(52, 52, 2, '2025-02-05', 5),
+(53, 53, 3, '2025-02-09', 3),
+(54, 54, 4, '2025-02-13', 2),
+(55, 55, 5, '2025-02-17', 4),
+(56, 56, 6, '2025-02-21', 5),
+(57, 57, 7, '2025-02-25', 3),
+(58, 58, 8, '2025-03-01', 4),
+(59, 59, 9, '2025-03-05', 2),
+(60, 60,10, '2025-03-09', 5),
+(61, 61, 1, '2025-03-13', 4),
+(62, 62, 2, '2025-03-17', 3),
+(63, 63, 3, '2025-03-21', 5),
+(64, 64, 4, '2025-03-25', 4),
+(65, 65, 5, '2025-03-29', 2),
+(66, 66, 6, '2025-04-02', 1),
+(67, 67, 7, '2025-04-06', 5),
+(68, 68, 8, '2025-04-10', 4),
+(69, 69, 9, '2025-04-14', 3),
+(70, 70,10, '2025-04-18', 2),
+(71, 71, 1, '2025-04-22', 5),
+(72, 72, 2, '2025-04-26', 4),
+(73, 73, 3, '2025-04-30', 3),
+(74, 74, 4, '2025-05-04', 5),
+(75, 75, 5, '2025-05-08', 4),
+(76, 76, 6, '2025-05-12', 2),
+(77, 77, 7, '2025-05-16', 5),
+(78, 78, 8, '2025-05-20', 3),
+(79, 79, 9, '2025-05-24', 4),
+(80, 80,10, '2025-05-28', 5),
+(81, 81, 1, '2025-06-01', 3),
+(82, 82, 2, '2025-06-05', 4),
+(83, 83, 3, '2025-06-09', 5),
+(84, 84, 4, '2025-06-13', 2),
+(85, 85, 5, '2025-06-17', 4),
+(86, 86, 6, '2025-06-21', 1),
+(87, 87, 7, '2025-06-25', 5),
+(88, 88, 8, '2025-06-29', 4),
+(89, 89, 9, '2025-07-03', 3),
+(90, 90,10, '2025-07-07', 2),
+(91, 91, 1, '2025-07-11', 5),
+(92, 92, 2, '2025-07-15', 4),
+(93, 93, 3, '2025-07-19', 3),
+(94, 94, 4, '2025-07-23', 5),
+(95, 95, 5, '2025-07-27', 4),
+(96, 96, 6, '2025-07-31', 2),
+(97, 97, 7, '2025-08-04', 5),
+(98, 98, 8, '2025-08-08', 3),
+(99, 99, 9, '2025-08-12', 4),
+(100,100,10,'2025-08-16', 5);
 
 INSERT INTO Comments  VALUES
 (1, 1, 'Excellent', 'Très utile et bien expliqué.'),
@@ -361,7 +467,57 @@ INSERT INTO Comments  VALUES
 (47, 47, 'Insuffisant', 'Pas assez d exercices.'),
 (48, 48, 'Clair', 'Bonne lisibilité.'),
 (49, 49, 'Très utile', 'A beaucoup aidé.'),
-(50, 50, 'Parfait', 'Contenu excellent.');
+(50, 50, 'Parfait', 'Contenu excellent.'),
+(51, 51, 'Utile', 'Bon complément.'),
+(52, 52, 'Très bon', 'Explications claires.'),
+(53, 53, 'OK', 'Assez correct.'),
+(54, 54, 'Décevant', 'Peut être amélioré.'),
+(55, 55, 'Clair', 'Bonne organisation.'),
+(56, 56, 'Recommandé', 'Très pratique.'),
+(57, 57, 'Bien', 'Suffisant pour réviser.'),
+(58, 58, 'Complet', 'Contenu assez complet.'),
+(59, 59, 'Utile', 'Aidait pour exercice.'),
+(60, 60, 'Très bien', 'Bonne pédagogie.'),
+(61, 61, 'Correct', 'Rien de spécial.'),
+(62, 62, 'À améliorer', 'Ajouter exemples.'),
+(63, 63, 'Satisfaisant', 'Convient pour examen.'),
+(64, 64, 'Complet', 'Très détaillé.'),
+(65, 65, 'Trop avancé', 'Niveau élevé.'),
+(66, 66, 'Pratique', 'Exemples concrets.'),
+(67, 67, 'Bien structuré', 'Chapitres clairs.'),
+(68, 68, 'Nécessite MAJ', 'Quelques corrections.'),
+(69, 69, 'Clair', 'Bonne présentation.'),
+(70, 70, 'Excellent', 'Très utile.'),
+(71, 71, 'Court', 'Peu de profondeur.'),
+(72, 72, 'Très utile', 'M a aidé pour examen.'),
+(73, 73, 'Correct', 'Utile.'),
+(74, 74, 'À jour', 'Contenu récent.'),
+(75, 75, 'Basique', 'Convient aux débutants.'),
+(76, 76, 'Pertinent', 'Sujets ciblés.'),
+(77, 77, 'Super', 'Bon pour pratique.'),
+(78, 78, 'OK', 'Peut être amélioré.'),
+(79, 79, 'Clair', 'Bonne présentation.'),
+(80, 80, 'Très bon', 'Rythme adapté.'),
+(81, 81, 'Excellent', 'Matériel de qualité.'),
+(82, 82, 'À revoir', 'Erreurs mineures.'),
+(83, 83, 'Bien', 'Suffisant pour cours.'),
+(84, 84, 'Complet', 'Très détaillé.'),
+(85, 85, 'Trop rapide', 'Aller trop vite.'),
+(86, 86, 'Utile', 'Bon support projet.'),
+(87, 87, 'Médiocre', 'Attentes non satisfaites.'),
+(88, 88, 'Correct', 'Peu d illustrations.'),
+(89, 89, 'Excellent', 'Contenu pertinent.'),
+(90, 90, 'Bien fait', 'Bonne structure.'),
+(91, 91, 'Pratique', 'Exemples concrets.'),
+(92, 92, 'Satisfaisant', 'Rien à signaler.'),
+(93, 93, 'À compléter', 'Ajouter chapitres avancés.'),
+(94, 94, 'Bon', 'Convient pour auto-apprentissage.'),
+(95, 95, 'Trop cher', 'Coût élevé.'),
+(96, 96, 'Excellent', 'Très bien rédigé.'),
+(97, 97, 'Insuffisant', 'Pas assez d exercices.'),
+(98, 98, 'Clair', 'Bonne lisibilité.'),
+(99, 99, 'Très utile', 'A beaucoup aidé.'),
+(100,100, 'Parfait', 'Contenu excellent.');
 
 INSERT INTO Abonnements VALUES
 (1,  '2024-01-01', '2024-12-31', 50,  1),
@@ -413,5 +569,99 @@ INSERT INTO Abonnements VALUES
 (47, '2026-12-01', '2027-05-31', 100, 47),
 (48, '2027-01-01', '2027-06-30', 150, 48),
 (49, '2027-02-01', '2027-08-01', 50,  49),
-(50, '2027-03-01', '2028-02-29', 100, 50);
+(50, '2027-03-01', '2028-02-29', 100, 50),
+(51, '2025-04-01', '2026-03-31', 50, 51),
+(52, '2025-05-01', '2026-04-30', 100,52),
+(53, '2025-06-01', '2026-05-31', 150,53),
+(54, '2025-07-01', '2026-06-30', 50, 54),
+(55, '2025-08-01', '2026-07-31', 100,55),
+(56, '2025-09-01', '2026-08-31', 150,56),
+(57, '2025-10-01', '2026-09-30', 50, 57),
+(58, '2025-11-01', '2026-10-31', 100,58),
+(59, '2025-12-01', '2026-11-30', 150,59),
+(60, '2026-01-01', '2026-12-31', 50, 60),
+(61, '2026-02-01', '2027-01-31', 100,61),
+(62, '2026-03-01', '2027-02-28', 150,62),
+(63, '2026-04-01', '2027-03-31', 50, 63),
+(64, '2026-05-01', '2027-04-30', 100,64),
+(65, '2026-06-01', '2027-05-31', 150,65),
+(66, '2026-07-01', '2027-06-30', 50, 66),
+(67, '2026-08-01', '2027-07-31', 100,67),
+(68, '2026-09-01', '2027-08-31', 150,68),
+(69, '2026-10-01', '2027-09-30', 50, 69),
+(70, '2026-11-01', '2027-10-31', 100,70),
+(71, '2026-12-01', '2027-11-30', 150,71),
+(72, '2027-01-01', '2027-12-31', 50, 72),
+(73, '2027-02-01', '2028-01-31', 100,73),
+(74, '2027-03-01', '2028-02-29', 150,74),
+(75, '2027-04-01', '2028-03-31', 50, 75),
+(76, '2027-05-01', '2028-04-30', 100,76),
+(77, '2027-06-01', '2028-05-31', 150,77),
+(78, '2027-07-01', '2028-06-30', 50, 78),
+(79, '2027-08-01', '2028-07-31', 100,79),
+(80, '2027-09-01', '2028-08-31', 150,80),
+(81, '2027-10-01', '2028-09-30', 50, 81),
+(82, '2027-11-01', '2028-10-31', 100,82),
+(83, '2027-12-01', '2028-11-30', 150,83),
+(84, '2028-01-01', '2028-12-31', 50, 84),
+(85, '2028-02-01', '2029-01-31', 100,85),
+(86, '2028-03-01', '2029-02-28', 150,86),
+(87, '2028-04-01', '2029-03-31', 50, 87),
+(88, '2028-05-01', '2029-04-30', 100,88),
+(89, '2028-06-01', '2029-05-31', 150,89),
+(90, '2028-07-01', '2029-06-30', 50, 90),
+(91, '2028-08-01', '2029-07-31', 100,91),
+(92, '2028-09-01', '2029-08-31', 150,92),
+(93, '2028-10-01', '2029-09-30', 50, 93),
+(94, '2028-11-01', '2029-10-31', 100,94),
+(95, '2028-12-01', '2029-11-30', 150,95),
+(96, '2029-01-01', '2029-12-31', 50, 96),
+(97, '2029-02-01', '2030-01-31', 100,97),
+(98, '2029-03-01', '2030-02-28', 150,98),
+(99, '2029-04-01', '2030-03-31', 50, 99),
+(100,'2029-05-01', '2030-04-30', 100,100);
 
+DELIMITER //
+
+CREATE TRIGGER ajoutAbonnement
+BEFORE INSERT ON Abonnements
+FOR EACH ROW
+BEGIN
+    DECLARE soldeWallet INT;
+    DECLARE walletExiste INT;
+
+    -- 1. Vérifier que la date de fin est postérieure ou égale à la date de début
+    IF NEW.date_fin < NEW.date_debut THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Erreur: la date de fin doit etre posterieure ou egale a la date de debut.';
+    END IF;
+
+    -- 2. Vérifier l'existence d'un portefeuille pour cet étudiant.
+    SELECT COUNT(*) INTO walletExiste
+    FROM Wallets
+    WHERE wid = NEW.eid;
+
+    IF walletExiste = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Erreur: aucun portefeuille trouve pour etudiant';
+    END IF;
+
+    -- 3. Lire le solde actuel du portefeuille
+    SELECT solde INTO soldeWallet
+    FROM Wallets
+    WHERE wid = NEW.eid
+    LIMIT 1;
+
+    -- 4. Vérifier que le solde est suffisant pour payer l'abonnement
+    IF soldeWallet IS NULL OR soldeWallet < NEW.cout THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Erreur: solde insuffisant';
+    END IF;
+
+    -- 5. Débiter le coût de l'abonnement du portefeuille
+    UPDATE Wallets
+    SET solde = solde - NEW.cout
+    WHERE wid = NEW.eid;
+END//
+
+DELIMITER ;
