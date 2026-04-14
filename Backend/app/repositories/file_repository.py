@@ -58,7 +58,6 @@ def rechercher_fichiers_db(cid=None, type_fichier=None):
 def ajouter_review_et_commentaire(eid, fid, note, titre, commentaire):
     """
     Insère une note dans Reviews et le texte dans Comments.
-    Exigence 4 : Utilisation de requêtes avancées et gestion d'erreurs.
     """
     conn = get_db_connection()
     try:
@@ -86,5 +85,71 @@ def ajouter_review_et_commentaire(eid, fid, note, titre, commentaire):
         print(f"❌ Erreur SQL Review : {e}")
         conn.rollback()
         return False
+    finally:
+        conn.close()
+
+def obtenir_reviews_par_fichier(fid):
+    """
+    Récupère tous les avis et commentaires pour un fichier donné.
+    Utilise une jointure explicite entre Reviews et Comments.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Jointure pour récupérer la note et le texte du commentaire associé
+        query = """
+            SELECT R.note, R.date_de_mise_enligne, C.titre, C.commentaire, E.nom
+            FROM Reviews R
+            JOIN Comments C ON R.rid = C.rid
+            JOIN Etudiants E ON R.eid = E.eid
+            WHERE R.fid = %s
+            ORDER BY R.date_de_mise_enligne DESC
+        """
+        cursor.execute(query, (fid,))
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+def calculer_moyenne_avis(fid):
+    """
+    Calcule la moyenne des notes pour un fichier spécifique.
+    Exigence 4 : Utilisation d'agrégations (AVG)[cite: 39].
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        query = "SELECT AVG(note) as moyenne, COUNT(*) as nb_avis FROM Reviews WHERE fid = %s"
+        cursor.execute(query, (fid,))
+        return cursor.fetchone()
+    finally:
+        conn.close()
+
+def rechercher_fichiers_filtres(cid=None, type_doc=None):
+    """
+    Recherche des fichiers avec filtres optionnels.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # Requête de base avec une jointure pour avoir le sigle du cours
+        query = """
+            SELECT F.*, C.sigle 
+            FROM Fichiers F
+            JOIN Cours C ON F.cid = C.cid
+            WHERE 1=1
+        """
+        params = []
+
+        if cid:
+            query += " AND F.cid = %s"
+            params.append(cid)
+        
+        if type_doc:
+            # On filtre par le type ENUM (Cours, Résumé, Examen, Exercices)
+            query += " AND F.type = %s"
+            params.append(type_doc)
+
+        cursor.execute(query, tuple(params))
+        return cursor.fetchall()
     finally:
         conn.close()

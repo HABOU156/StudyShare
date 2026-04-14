@@ -64,7 +64,6 @@ def poster_review():
     titre = data.get('titre')
     commentaire = data.get('commentaire')
 
-    # 2. Vérification des champs obligatoires (Exigence 60)
     # On s'assure qu'aucune donnée n'est manquante avant de contacter le service
     if not all([eid, fid, note, titre, commentaire]):
         return jsonify({"status": "error", "message": "Données incomplètes (eid, fid, note, titre ou commentaire manquant)."}), 400
@@ -76,3 +75,33 @@ def poster_review():
         return jsonify({"status": "success", "message": message}), 201
     
     return jsonify({"status": "error", "message": message}), 500
+
+@file_bp.route('/api/fichiers/<int:fid>/reviews', methods=['GET'])
+def voir_reviews_fichier(fid):
+    """
+    Route pour consulter les avis d'un fichier et sa moyenne.
+    """
+    resultats, message = file_service.obtenir_details_avis(fid)
+    
+    if resultats:
+        return jsonify({"status": "success", "data": resultats}), 200
+    return jsonify({"status": "error", "message": message}), 400
+
+@file_bp.route('/api/fichiers/filtre', methods=['GET'])
+def obtenir_fichiers_filtres():
+    """
+    Route de recherche avec filtres.
+    Exigence 9 : Organisation logique pour l'utilisateur.
+    """
+    cid = request.args.get('cid')
+    type_doc = request.args.get('type')
+
+    fichiers, message = file_service.filtrer_fichiers(cid, type_doc)
+    
+    if fichiers is not None:
+        return jsonify({
+            "status": "success",
+            "count": len(fichiers),
+            "fichiers": fichiers
+        }), 200
+    return jsonify({"status": "error", "message": message}), 400

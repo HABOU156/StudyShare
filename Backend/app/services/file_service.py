@@ -54,7 +54,6 @@ def obtenir_liste_fichiers():
 def publier_avis(eid, fid, note, titre, commentaire):
     """
     Logique d'affaire : Validation et publication.
-    Exigence 8 : Valider les infos et minimiser les communications[cite: 54, 55].
     """
     try:
         # Validation (Exigence 60) [cite: 60]
@@ -73,3 +72,43 @@ def publier_avis(eid, fid, note, titre, commentaire):
         # Exigence 56 : Attraper les cas d'erreurs inattendus [cite: 56]
         print(f"Erreur : {e}")
         return False, str(e)
+    
+def obtenir_details_avis(fid):
+    """
+    Logique d'affaire : Récupère les avis et la moyenne pour un document.
+    """
+    try:
+        if not fid:
+            return None, "ID du fichier manquant."
+
+        # On récupère les deux types d'informations
+        stats = file_repository.calculer_moyenne_avis(fid)
+        liste_reviews = file_repository.obtenir_reviews_par_fichier(fid)
+
+        # On formate la réponse
+        data = {
+            "moyenne": round(stats['moyenne'], 1) if stats['moyenne'] else 0,
+            "total_avis": stats['nb_avis'],
+            "reviews": liste_reviews
+        }
+        return data, "Succès"
+    except Exception as e:
+        print(f"Erreur service reviews : {e}")
+        return None, str(e)
+    
+def filtrer_fichiers(cid, type_doc):
+    """
+    Logique d'affaire pour le filtrage.
+    """
+    try:
+        # Liste des types autorisés selon ton ENUM SQL 
+        types_valides = ['Cours', 'Résumé', 'Examen', 'Exercices']
+        
+        # Si un type est fourni mais qu'il n'est pas dans la liste, on le rejette
+        if type_doc and type_doc not in types_valides:
+            return None, "Type de document invalide."
+
+        resultats = file_repository.rechercher_fichiers_filtres(cid, type_doc)
+        return resultats, "Succès"
+    except Exception as e:
+        return None, str(e)
