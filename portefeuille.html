@@ -38,7 +38,7 @@
       <div class="card">
         <h2 class="card-title">Solde actuel</h2>
         <p class="card-meta" id="solde-affichage">25,00 $</p>
-        <p class="text-muted">Méthode de paiement enregistrée : Carte ****1234</p>
+        <p class="text-muted" id="wallet-hint">Solde synchronisé avec l’API.</p>
       </div>
 
       <section class="card">
@@ -63,11 +63,9 @@
       </section>
 
       <section class="card mt-2">
-        <h2>Abonnements achetés</h2>
-        <ul class="card-meta" style="list-style: none; padding: 0;">
-          <li>Abonnement premium — 15,00 $ — 10/03/2025</li>
-          <li>Abonnement premium — 15,00 $ — 08/02/2025</li>
-        </ul>
+        <h2>Abonnement Premium</h2>
+        <p class="text-muted">Le passage en Premium coûte 20,00 $ et est déduit de votre solde.</p>
+        <button type="button" class="btn btn-primary" id="btn-premium">Devenir Premium (20,00 $)</button>
       </section>
     </div>
   </main>
@@ -80,6 +78,7 @@
     </div>
   </footer>
 
+  <script src="js/api.js"></script>
   <script src="js/validation.js"></script>
   <script src="js/app.js"></script>
   <script>
@@ -90,16 +89,52 @@
       var montantEl = form && form.querySelector('#montant');
       var paymentEl = form && form.querySelector('#payment_mthd');
       var soldeEl = document.getElementById('solde-affichage');
+      var statutEl = document.getElementById('statut-premium');
+      var btnPremium = document.getElementById('btn-premium');
 
-      var soldeActuel = 25.0;
-
-      if (!form || !window.StudyShare || !window.StudyShare.validation) return;
+      if (!form || !window.StudyShare || !window.StudyShare.validation || !window.StudyShareApi) return;
       var v = window.StudyShare.validation;
+
+      function refreshAffichage(user, wallet) {
+        if (statutEl) {
+          statutEl.textContent = user && user.premium ? 'Oui' : 'Non';
+        }
+        if (soldeEl && wallet && wallet.solde != null) {
+          soldeEl.textContent = parseFloat(wallet.solde).toFixed(2).replace('.', ',') + ' $';
+        }
+      }
+
+      function chargerPortefeuille() {
+        var user = window.StudyShareApi.getCurrentUser();
+        if (!user || !user.eid) {
+          if (soldeEl) soldeEl.textContent = '—';
+          window.StudyShare.showAlert('Connectez-vous pour afficher et modifier votre portefeuille.', 'info', alertContainer);
+          var sub = form.querySelector('button[type="submit"]');
+          if (sub) sub.disabled = true;
+          if (btnPremium) btnPremium.disabled = true;
+          return;
+        }
+        refreshAffichage(user, null);
+        window.StudyShareApi.getWallet(user.eid).then(function (data) {
+          var w = data && data.wallet;
+          refreshAffichage(user, w);
+        }).catch(function () {
+          window.StudyShare.showAlert('Impossible de charger le solde (API ou base de données).', 'error', alertContainer);
+        });
+      }
+
+      chargerPortefeuille();
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         window.StudyShare.clearFormErrors(form);
         while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+        var user = window.StudyShareApi.getCurrentUser();
+        if (!user || !user.eid) {
+          window.StudyShare.showAlert('Vous devez être connecté.', 'error', alertContainer);
+          return;
+        }
 
         var montantResult = v.validateMontant(montantEl ? montantEl.value : '');
         var paymentVal = paymentEl ? paymentEl.value : '';
@@ -118,16 +153,40 @@
           return;
         }
 
-        try {
-          var ajout = parseFloat(String(montantEl.value).replace(',', '.'));
-          soldeActuel += ajout;
-          if (soldeEl) soldeEl.textContent = soldeActuel.toFixed(2) + ' $';
+        var ajout = parseFloat(String(montantEl.value).replace(',', '.'));
+        window.StudyShareApi.depotWallet(user.eid, ajout).then(function () {
+          return window.StudyShareApi.getWallet(user.eid);
+        }).then(function (data) {
+          refreshAffichage(user, data.wallet);
           window.StudyShare.showAlert('Fonds ajoutés avec succès.', 'success', alertContainer);
           form.reset();
-        } catch (err) {
-          window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
-        }
+        }).catch(function (err) {
+          window.StudyShare.showAlert(err.message || 'Dépôt refusé.', 'error', alertContainer);
+        });
       });
+
+      if (btnPremium) {
+        btnPremium.addEventListener('click', function () {
+          var user = window.StudyShareApi.getCurrentUser();
+          if (!user || !user.eid) {
+            window.StudyShare.showAlert('Connectez-vous d’abord.', 'error', alertContainer);
+            return;
+          }
+          btnPremium.disabled = true;
+          window.StudyShareApi.devenirPremium(user.eid).then(function () {
+            user.premium = 1;
+            window.StudyShareApi.setCurrentUser(user);
+            return window.StudyShareApi.getWallet(user.eid);
+          }).then(function (data) {
+            refreshAffichage(window.StudyShareApi.getCurrentUser(), data.wallet);
+            window.StudyShare.showAlert('Abonnement Premium activé.', 'success', alertContainer);
+          }).catch(function (err) {
+            window.StudyShare.showAlert(err.message || 'Impossible d’activer Premium.', 'error', alertContainer);
+          }).then(function () {
+            btnPremium.disabled = false;
+          });
+        });
+      }
     })();
   </script>
 </body>

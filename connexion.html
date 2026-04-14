@@ -58,6 +58,7 @@
     </div>
   </footer>
 
+  <script src="js/api.js"></script>
   <script src="js/validation.js"></script>
   <script src="js/app.js"></script>
   <script>
@@ -67,7 +68,7 @@
       var alertContainer = document.getElementById('alert-container');
       var btnSubmit = document.getElementById('btn-submit');
 
-      if (!form) return;
+      if (!form || !window.StudyShareApi) return;
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -104,15 +105,18 @@
         }
 
         btnSubmit.disabled = true;
-        try {
+        window.StudyShareApi.login(emailEl.value.trim(), passwordEl.value).then(function (data) {
+          if (data.user) {
+            window.StudyShareApi.setCurrentUser(data.user);
+          }
           window.StudyShare.showAlert('Connexion réussie. Redirection…', 'success', alertContainer);
           setTimeout(function () {
             window.location.href = 'fichiers.html';
-          }, 1000);
-        } catch (err) {
-          window.StudyShare.showAlert('Une erreur est survenue. Réessayez.', 'error', alertContainer);
+          }, 800);
+        }).catch(function (err) {
+          window.StudyShare.showAlert(err.message || 'Connexion refusée.', 'error', alertContainer);
           btnSubmit.disabled = false;
-        }
+        });
       });
     })();
   </script>

@@ -47,7 +47,37 @@ def chercher_fichiers(cid=None, type_fichier=None):
 
 def obtenir_liste_fichiers():
     from app.repositories import file_repository
-    return file_repository.get_tous_les_fichiers()
+    return file_repository.get_fichiers_avec_cours_et_note()
+
+
+def obtenir_fichier_par_id(fid):
+    from app.repositories import file_repository
+    return file_repository.get_fichier_detail(fid)
+
+
+def recuperer_fichier_par_fid(fid):
+    """Envoie le fichier physique à partir du fid (chemin relatif enregistré en BD)."""
+    from app.repositories import file_repository
+    lien = file_repository.get_lien_access_par_fid(fid)
+    if not lien:
+        return None
+    return recuperer_fichier_par_chemin_relatif(lien)
+
+
+def recuperer_fichier_par_chemin_relatif(lien_access):
+    if not lien_access:
+        return None
+    lien_access = lien_access.replace("\\", "/").lstrip("/")
+    base = os.getcwd()
+    full = os.path.normpath(os.path.join(base, lien_access))
+    if not full.startswith(base):
+        return None
+    directory = os.path.dirname(full)
+    basename = os.path.basename(full)
+    try:
+        return send_from_directory(directory, basename, as_attachment=True)
+    except FileNotFoundError:
+        return None
 
 # Dans app/services/file_service.py
 

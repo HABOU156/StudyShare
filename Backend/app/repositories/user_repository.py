@@ -1,6 +1,19 @@
 from config import get_db_connection
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+def list_universites():
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT uid, nom FROM Universite ORDER BY nom")
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
 def create_etudiant(nom, courriel, password, uid_universite):
 
     conn = get_db_connection()
