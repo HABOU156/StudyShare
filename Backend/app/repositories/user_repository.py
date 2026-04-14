@@ -63,23 +63,46 @@ def peut_acceder_fichier(eid):
 def enregistrer_acces_fichier(eid, fid):
     conn = get_db_connection()
     if not conn:
-        return False, "Erreur de connexion base de données"
+        return False, "Erreur de connexion"
     
     try:
-        if not peut_acceder_fichier(eid):
-            return False, "Limite de 5 fichiers atteinte. Passez à Premium !"
-            
-        cursor = conn.cursor()
-        # On vérifie si l'étudiant n'a pas déjà accédé à CE fichier précis
-        cursor.execute("SELECT * FROM Acceder WHERE eid = %s AND fid = %s", (eid, fid))
-        if cursor.fetchone():
-            return True, "Fichier déjà consulté (accès autorisé)"
+        cursor = conn.cursor(dictionary=True)
+        
+        # 1. Vérifier si l'étudiant est premium (accès illimité)
+        cursor.execute("SELECT premium FROM Etudiants WHERE eid = %s", (eid,))
+        user = cursor.fetchone()
+        is_premium = user['premium'] if user else 0
 
-        # Sinon, on insère le nouvel accès
-        cursor.execute("INSERT INTO Acceder (eid, fid) VALUES (%s, %s)", (eid, fid))
-        conn.commit()
-        return True, "Accès autorisé et enregistré"
+        # 2. Vérifier si c'est une première visite pour ce fichier
+        # (Si déjà visité, on autorise sans décompter du quota)
+        cursor.execute("SELECT aid FROM Acceder WHERE eid = %s AND fid = %s", (eid, fid))
+        deja_visite = cursor.fetchone()
+
+        if not is_premium and not deja_visite:
+            # 3. Vérifier le quota (Max 5 fichiers différents)
+            cursor.execute("SELECT COUNT(DISTINCT fid) as total FROM Acceder WHERE eid = %s", (eid,))
+            count = cursor.fetchone()
+            if count['total'] >= 5:
+                return False, "Limite de 5 fichiers atteinte. Devenez Premium !"
+
+        # 4. Si accès autorisé et nouvelle visite, on enregistre
+        if not deja_visite:
+            # Récupérer le nom du fichier pour l'historique
+            cursor.execute("SELECT lien_access FROM Fichiers WHERE fid = %s", (fid,))
+            fichier = cursor.fetchone()
+            nom = fichier['lien_access'] if fichier else "Fichier inconnu"
+
+            query = """
+                INSERT INTO Acceder (eid, fid, date_visite, nom_fichier) 
+                VALUES (%s, %s, CURDATE(), %s)
+            """
+            cursor.execute(query, (eid, fid, nom))
+            conn.commit()
+            
+        return True, "Accès accordé"
+
     except Exception as e:
+        print(f"Erreur Acceder : {e}")
         return False, str(e)
     finally:
         conn.close()
@@ -132,8 +155,30 @@ def get_wallet_by_eid(eid):
     try:
         cursor = conn.cursor(dictionary=True)
         # Note : Dans ton script SQL, wid semble correspondre à l'eid
-        query = "SELECT * FROM Wallets WHERE wid = %s"
+        query = "SELECT * FROM Wallets WHERE eid = %s"
         cursor.execute(query, (eid,))
         return cursor.fetchone()
+    finally:
+        conn.close()
+
+def enregistrer_abonnement(eid, cout, duree_mois=6):
+    """
+    Enregistre la trace de l'abonnement dans la table Abonnements.
+    Exigence 3 : Cohérence avec la modélisation.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Calcule les dates (6 mois par défaut comme dans ton SQL)
+        query = """
+            INSERT INTO Abonnements (date_debut, date_fin, cout, eid)
+            VALUES (CURDATE(), DATE_ADD(CURDATE(), INTERVAL %s MONTH), %s, %s)
+        """
+        cursor.execute(query, (duree_mois, cout, eid))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Erreur SQL Abonnements : {e}")
+        return False
     finally:
         conn.close()

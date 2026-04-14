@@ -52,3 +52,27 @@ def rechercher_fichiers():
         "count": len(resultats),
         "fichiers": resultats
     }), 200
+
+@file_bp.route('/api/fichiers/review', methods=['POST'])
+def poster_review():
+    data = request.json
+    
+    # 1. Extraction des données
+    eid = data.get('eid')
+    fid = data.get('fid')
+    note = data.get('note')
+    titre = data.get('titre')
+    commentaire = data.get('commentaire')
+
+    # 2. Vérification des champs obligatoires (Exigence 60)
+    # On s'assure qu'aucune donnée n'est manquante avant de contacter le service
+    if not all([eid, fid, note, titre, commentaire]):
+        return jsonify({"status": "error", "message": "Données incomplètes (eid, fid, note, titre ou commentaire manquant)."}), 400
+
+    # 3. Appel unique au service (Exigence 55 : minimiser les communications)
+    success, message = file_service.publier_avis(eid, fid, note, titre, commentaire)
+    
+    if success:
+        return jsonify({"status": "success", "message": message}), 201
+    
+    return jsonify({"status": "error", "message": message}), 500

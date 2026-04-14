@@ -1,89 +1,99 @@
 -- ==========================================================
--- SCRIPT COMPLET : BASE DE DONNÉES STUDYSHARE
--- Projet : GLO-2005 (Université Laval)
+-- STUDYSHARE
 -- ==========================================================
 
 DROP DATABASE IF EXISTS StudyShare;
 CREATE DATABASE StudyShare;
 USE StudyShare;
 
--- ---------------------------------------------------------
--- 1. CRÉATION DES TABLES (DDL)
--- ---------------------------------------------------------
-
+-- 1. Tables de base
 CREATE TABLE IF NOT EXISTS Universite ( 
-    uid int,
-    nom varchar(50),
+    uid INT AUTO_INCREMENT,
+    nom VARCHAR(50),
     PRIMARY KEY (uid)
 );
-                                
+
 CREATE TABLE IF NOT EXISTS Cours (  
-    cid int,
-    sigle varchar(8),
-    uid int,
+    cid INT AUTO_INCREMENT,
+    sigle VARCHAR(8),
+    uid INT,
     PRIMARY KEY (cid),
     CONSTRAINT FK_C_Universite FOREIGN KEY (uid) REFERENCES Universite(uid)
 );
 
+-- 2. Utilisateurs et accès
 CREATE TABLE IF NOT EXISTS Etudiants (  
-    eid int,
-    nom varchar(50),
-    uid int,
-    email varchar(100) UNIQUE,
-    passwordHash varchar(100),
-    premium TINYINT(1) DEFAULT 0, -- Nouvelle colonne ajoutée
+    eid INT AUTO_INCREMENT,
+    nom VARCHAR(50),
+    uid INT,
+    courriel VARCHAR(100) UNIQUE,
+    passwordHash VARCHAR(255), 
+    premium TINYINT(1) DEFAULT 0,
     PRIMARY KEY (eid),
     CONSTRAINT FK_E_Universite FOREIGN KEY (uid) REFERENCES Universite(uid)
 );
 
+CREATE TABLE IF NOT EXISTS Wallets (    
+    wid INT AUTO_INCREMENT,
+    solde DECIMAL(10,2) DEFAULT 0.00,
+    payment_method VARCHAR(50),
+    eid INT UNIQUE, 
+    PRIMARY KEY (wid),
+    CONSTRAINT FK_W_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid) ON DELETE CASCADE
+);
+
+-- 3. Fichiers et contenu
 CREATE TABLE IF NOT EXISTS Fichiers (   
-    fid int,
-    lien_access varchar(100),
+    fid INT AUTO_INCREMENT,
+    lien_access VARCHAR(100),
     type ENUM('Cours', 'Résumé', 'Examen', 'Exercices'),
-    cid int,
+    cid INT, -- Ajouté : nécessaire pour la FK ci-dessous
     mise_en_ligne DATE,
     PRIMARY KEY (fid),
     CONSTRAINT FK_F_Cours FOREIGN KEY (cid) REFERENCES Cours(cid)
 );
-ALTER TABLE Fichiers MODIFY COLUMN fid INT AUTO_INCREMENT;
 
-CREATE TABLE IF NOT EXISTS Wallets (    
-    wid int,
-    solde DECIMAL(10,2),
-    payment_method varchar(50),
-    PRIMARY KEY (wid)
+CREATE TABLE IF NOT EXISTS Acceder (
+    aid INT AUTO_INCREMENT,
+    eid INT,
+    fid INT,
+    date_visite DATE,
+    nom_fichier VARCHAR(100),
+    PRIMARY KEY (aid),
+    CONSTRAINT FK_Acc_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid),
+    CONSTRAINT FK_Acc_Fichier FOREIGN KEY (fid) REFERENCES Fichiers(fid)
 );
-                
+
+-- 4. Social et Abonnements
 CREATE TABLE IF NOT EXISTS Reviews (    
-    rid int,
-    eid int,
-    fid int,
+    rid INT AUTO_INCREMENT,
+    eid INT,
+    fid INT,
     date_de_mise_enligne DATE,
-    note int CHECK (note > 0 AND note < 6),
+    note INT CHECK (note >= 1 AND note <= 5),
     PRIMARY KEY (rid),
     CONSTRAINT FK_R_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid),
     CONSTRAINT FK_R_Fichier FOREIGN KEY (fid) REFERENCES Fichiers(fid)
 );
 
 CREATE TABLE IF NOT EXISTS Comments (   
-    cid int,
-    rid int,
-    titre varchar(50),
-    commentaire varchar(200),
-    PRIMARY KEY (cid),
+    com_id INT AUTO_INCREMENT, -- Renommé pour éviter conflit avec cid
+    rid INT,
+    titre VARCHAR(50),
+    commentaire VARCHAR(200),
+    PRIMARY KEY (com_id),
     CONSTRAINT FK_C_Review FOREIGN KEY (rid) REFERENCES Reviews(rid)
 );
 
 CREATE TABLE IF NOT EXISTS Abonnements (
-    aid int,
+    aid INT AUTO_INCREMENT,
     date_debut DATE,
     date_fin DATE,
-    cout int,
-    eid int,
+    cout INT,
+    eid INT,
     PRIMARY KEY (aid),
     CONSTRAINT FK_A_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid)
 );
-
 -- ---------------------------------------------------------
 -- 2. INSERTION DES DONNÉES (DML)
 -- ---------------------------------------------------------
@@ -103,7 +113,7 @@ INSERT INTO Cours VALUES
 
 -- Insertion Etudiants avec la colonne Premium (1 pour premium, 0 pour normal)
 INSERT INTO Etudiants VALUES
-(1, "Marc Tremblay", 1, "marc.tremblay@gmail.com", "hash123", 1),
+(1, "Marc Tremblay", 1, "marc.tremblay@gmail.com", "hash123", 0),
 (2, "Sophie Gagnon", 2, "sophie.gagnon@gmail.com", "hash123", 1),
 (3, "Alexandre Roy", 3, "alexandre.roy@gmail.com", "hash123", 1),
 (4, "Julie Bouchard", 4, "julie.bouchard@gmail.com", "hash123", 1),
@@ -167,16 +177,16 @@ INSERT INTO Fichiers VALUES
 (10, 'fichiers/IFT-1000_resume.pdf', 'Résumé', 10, '2024-05-01');
 
 INSERT INTO Wallets VALUES
-(1, 87.00, 'Google Pay'), (2, 12.00, 'Apple Pay'), (3, 54.00, 'Carte de Credit'), (4, 0.00, 'Carte de Debit'), (5, 100.00, 'Argent'),
-(6, 33.00, 'Google Pay'), (7, 76.00, 'Carte de Credit'), (8, 45.00, 'Apple Pay'), (9, 9.00, 'Argent'), (10, 68.00, 'Carte de Debit'),
-(11, 21.00, 'Google Pay'), (12, 57.00, 'Carte de Credit'), (13, 3.00, 'Argent'), (14, 90.00, 'Apple Pay'), (15, 47.00, 'Carte de Debit'),
-(16, 14.00, 'Google Pay'), (17, 99.00, 'Carte de Credit'), (18, 32.00, 'Apple Pay'), (19, 0.00, 'Argent'), (20, 61.00, 'Carte de Debit'),
-(21, 8.00, 'Google Pay'), (22, 73.00, 'Carte de Credit'), (23, 29.00, 'Apple Pay'), (24, 56.00, 'Argent'), (25, 42.00, 'Carte de Debit'),
-(26, 5.00, 'Google Pay'), (27, 88.00, 'Carte de Credit'), (28, 16.00, 'Apple Pay'), (29, 64.00, 'Argent'), (30, 38.00, 'Carte de Debit'),
-(31, 25.00, 'Google Pay'), (32, 81.00, 'Carte de Credit'), (33, 7.00, 'Apple Pay'), (34, 49.00, 'Argent'), (35, 95.00, 'Carte de Debit'),
-(36, 18.00, 'Google Pay'), (37, 60.00, 'Carte de Credit'), (38, 2.00, 'Apple Pay'), (39, 70.00, 'Argent'), (40, 44.00, 'Carte de Debit'),
-(41, 11.00, 'Google Pay'), (42, 83.00, 'Carte de Credit'), (43, 36.00, 'Apple Pay'), (44, 50.00, 'Argent'), (45, 28.00, 'Carte de Debit'),
-(46, 66.00, 'Google Pay'), (47, 4.00, 'Carte de Credit'), (48, 92.00, 'Apple Pay'), (49, 40.00, 'Argent'), (50, 17.00, 'Carte de Debit');
+(1, 200.00, 'Google Pay', 1), (2, 12.00, 'Apple Pay', 2), (3, 54.00, 'Carte de Credit', 3), (4, 0.00, 'Carte de Debit', 4), (5, 100.00, 'Argent', 5),
+(6, 33.00, 'Google Pay', 6), (7, 76.00, 'Carte de Credit', 7), (8, 45.00, 'Apple Pay', 8), (9, 9.00, 'Argent', 9), (10, 68.00, 'Carte de Debit', 10),
+(11, 21.00, 'Google Pay', 11), (12, 57.00, 'Carte de Credit', 12), (13, 3.00, 'Argent', 13), (14, 90.00, 'Apple Pay', 14), (15, 47.00, 'Carte de Debit', 15),
+(16, 14.00, 'Google Pay', 16), (17, 99.00, 'Carte de Credit', 17), (18, 32.00, 'Apple Pay', 18), (19, 0.00, 'Argent', 19), (20, 61.00, 'Carte de Debit', 20),
+(21, 8.00, 'Google Pay', 21), (22, 73.00, 'Carte de Credit', 22), (23, 29.00, 'Apple Pay', 23), (24, 56.00, 'Argent', 24), (25, 42.00, 'Carte de Debit', 25),
+(26, 5.00, 'Google Pay', 26), (27, 88.00, 'Carte de Credit', 27), (28, 16.00, 'Apple Pay', 28), (29, 64.00, 'Argent', 29), (30, 38.00, 'Carte de Debit', 30),
+(31, 25.00, 'Google Pay', 31), (32, 81.00, 'Carte de Credit', 32), (33, 7.00, 'Apple Pay', 33), (34, 49.00, 'Argent', 34), (35, 95.00, 'Carte de Debit', 35),
+(36, 18.00, 'Google Pay', 36), (37, 60.00, 'Carte de Credit', 37), (38, 2.00, 'Apple Pay', 38), (39, 70.00, 'Argent', 39), (40, 44.00, 'Carte de Debit', 40),
+(41, 11.00, 'Google Pay', 41), (42, 83.00, 'Carte de Credit', 42), (43, 36.00, 'Apple Pay', 43), (44, 50.00, 'Argent', 44), (45, 28.00, 'Carte de Debit', 45),
+(46, 66.00, 'Google Pay', 46), (47, 4.00, 'Carte de Credit', 47), (48, 92.00, 'Apple Pay', 48), (49, 40.00, 'Argent', 49), (50, 17.00, 'Carte de Debit', 50);
 
 INSERT INTO Reviews VALUES
 (1, 1, 1, '2024-01-15', 5), (2, 1, 2, '2024-01-20', 4), (3, 2, 3, '2024-02-03', 4), (4, 3, 4, '2024-02-20', 3), (5, 3, 5, '2024-02-25', 2),

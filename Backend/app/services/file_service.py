@@ -48,3 +48,28 @@ def chercher_fichiers(cid=None, type_fichier=None):
 def obtenir_liste_fichiers():
     from app.repositories import file_repository
     return file_repository.get_tous_les_fichiers()
+
+# Dans app/services/file_service.py
+
+def publier_avis(eid, fid, note, titre, commentaire):
+    """
+    Logique d'affaire : Validation et publication.
+    Exigence 8 : Valider les infos et minimiser les communications[cite: 54, 55].
+    """
+    try:
+        # Validation (Exigence 60) [cite: 60]
+        if not (1 <= int(note) <= 5):
+            return False, "La note doit être entre 1 et 5."
+
+        # Appel au repository (On importe file_repository en haut du fichier)
+        from app.repositories import file_repository
+        success = file_repository.ajouter_review_et_commentaire(eid, fid, note, titre, commentaire)
+        
+        if success:
+            return True, "Avis publié !"
+        return False, "Échec de l'enregistrement."
+
+    except Exception as e:
+        # Exigence 56 : Attraper les cas d'erreurs inattendus [cite: 56]
+        print(f"Erreur : {e}")
+        return False, str(e)

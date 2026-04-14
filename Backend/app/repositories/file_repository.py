@@ -54,3 +54,37 @@ def rechercher_fichiers_db(cid=None, type_fichier=None):
         return cursor.fetchall()
     finally:
         conn.close()
+
+def ajouter_review_et_commentaire(eid, fid, note, titre, commentaire):
+    """
+    Insère une note dans Reviews et le texte dans Comments.
+    Exigence 4 : Utilisation de requêtes avancées et gestion d'erreurs.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # 1. Insertion dans la table Reviews
+        # On utilise CURDATE() pour la date_de_mise_enligne 
+        query_review = """
+            INSERT INTO Reviews (eid, fid, date_de_mise_enligne, note)
+            VALUES (%s, %s, CURDATE(), %s)
+        """
+        cursor.execute(query_review, (eid, fid, note))
+        rid = cursor.lastrowid # On récupère l'ID de la review pour le commentaire
+        
+        # 2. Insertion dans la table Comments
+        query_comment = """
+            INSERT INTO Comments (rid, titre, commentaire)
+            VALUES (%s, %s, %s)
+        """
+        cursor.execute(query_comment, (rid, titre, commentaire))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Erreur SQL Review : {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
