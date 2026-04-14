@@ -4,7 +4,7 @@ def get_wallet_by_eid(eid):
     conn = get_db_connection()
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Wallets WHERE eid = %s", (eid,))
+        cursor.execute("SELECT wid, eid, CAST(solde AS FLOAT) as solde FROM Wallets WHERE eid = %s", (eid,))
         return cursor.fetchone()
     finally:
         conn.close()

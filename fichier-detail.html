@@ -39,7 +39,7 @@
       <section class="card mb-2">
         <h2>Aperçu du document</h2>
         <div id="preview-container" class="mt-2">
-          <p class="text-muted" id="preview-status">Chargement de l’aperçu…</p>
+          <p class="text-muted" id="preview-status">Chargement de l'aperçu…</p>
         </div>
       </section>
 
@@ -76,7 +76,7 @@
       <section class="card mt-2">
         <h2>Avis des utilisateurs</h2>
         <div id="reviews-list">
-          <p class="card-meta text-muted">Les avis détaillés peuvent être consultés via la base de données ; cette page enregistre vos nouveaux avis via l’API.</p>
+          <p class="text-muted card-meta" id="reviews-placeholder">Chargement des avis…</p>
         </div>
       </section>
     </div>
@@ -91,34 +91,41 @@
   </footer>
 
   <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/validation.js"></script>
   <script src="js/app.js"></script>
   <script>
     (function () {
       'use strict';
-      var form = document.getElementById('form-review');
-      var alertContainer = document.getElementById('alert-container');
-      var noteEl = form && form.querySelector('#review-note');
-      var titreEl = form && form.querySelector('#review-titre');
-      var commentEl = form && form.querySelector('#review-comment');
-      var badgeType = document.getElementById('badge-type');
-      var docTitle = document.getElementById('doc-title');
-      var docCours = document.getElementById('doc-cours');
-      var docDate = document.getElementById('doc-date');
-      var docNote = document.getElementById('doc-note');
-      var btnDownload = document.getElementById('btn-download');
 
-      var params = new URLSearchParams(window.location.search);
-      var fileId = params.get('id') || '';
-      var fichierCourant = null;
+      /* ── Éléments DOM ── */
+      var form           = document.getElementById('form-review');
+      var alertContainer = document.getElementById('alert-container');
+      var noteEl         = form && form.querySelector('#review-note');
+      var titreEl        = form && form.querySelector('#review-titre');
+      var commentEl      = form && form.querySelector('#review-comment');
+      var badgeType      = document.getElementById('badge-type');
+      var docTitle       = document.getElementById('doc-title');
+      var docCours       = document.getElementById('doc-cours');
+      var docDate        = document.getElementById('doc-date');
+      var docNote        = document.getElementById('doc-note');
+      var btnDownload    = document.getElementById('btn-download');
+      var reviewsList    = document.getElementById('reviews-list');
+
+      var params  = new URLSearchParams(window.location.search);
+      var fileId  = params.get('id') || '';
+
+      /* État global de session — initialisé au chargement via /api/session-check */
+      var sessionUser = null; /* { logged_in, user_id, premium } */
 
       var typeClass = {
-        'Cours': 'file-type-cours',
-        'Résumé': 'file-type-resume',
-        'Examen': 'file-type-examen',
+        'Cours':     'file-type-cours',
+        'Résumé':    'file-type-resume',
+        'Examen':    'file-type-examen',
         'Exercices': 'file-type-exercices'
       };
 
+      /* ── Utilitaires ── */
       function formatDate(str) {
         if (!str) return '—';
         var d = new Date(str);
@@ -132,14 +139,91 @@
         return idx >= 0 ? clean.slice(idx + 1).toLowerCase() : '';
       }
 
+      function showAlert(message, type) {
+        while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+        if (window.StudyShare && window.StudyShare.showAlert) {
+          window.StudyShare.showAlert(message, type, alertContainer);
+        }
+      }
+
+      /* ── Vérification de session (source de vérité : cookie Flask) ── */
+      function verifierSession() {
+        return fetch('/api/session-check', { credentials: 'include' })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            sessionUser = data; /* { logged_in, user_id, premium } */
+            return data;
+          })
+          .catch(function () {
+            sessionUser = { logged_in: false };
+            return sessionUser;
+          });
+      }
+
+      /* ── Chargement des métadonnées du fichier ── */
+      function chargerFichier() {
+        if (!window.StudyShareApi || !fileId) {
+          if (docTitle) docTitle.textContent = 'Paramètre id manquant';
+          return;
+        }
+
+        window.StudyShareApi.getFichier(fileId)
+          .then(function (data) {
+            var f = data && data.fichier;
+            if (!f) {
+              if (docTitle) docTitle.textContent = 'Document introuvable';
+              return;
+            }
+
+            var mapped = window.StudyShareApi.mapFichierPourUi(f);
+
+            if (badgeType) {
+              badgeType.textContent = f.type || '';
+              badgeType.className = 'file-type-badge ' + (typeClass[f.type] || '');
+            }
+            if (docTitle) docTitle.textContent = mapped.titre;
+            if (docCours) docCours.textContent = mapped.cours;
+            if (docDate)  docDate.textContent  = formatDate(mapped.date);
+
+            if (docNote) {
+              if (mapped.note > 0) {
+                docNote.textContent = '★'.repeat(mapped.note) + '☆'.repeat(5 - mapped.note);
+                docNote.setAttribute('aria-label', 'Note : ' + mapped.note + ' sur 5');
+              } else {
+                docNote.textContent = 'Pas encore noté';
+              }
+            }
+
+            /* Activer le bouton download seulement si connecté */
+            if (btnDownload) {
+              btnDownload.disabled = !sessionUser || !sessionUser.logged_in;
+            }
+
+            renderPreview(f);
+          })
+          .catch(function () {
+            if (docTitle) docTitle.textContent = 'Document introuvable';
+            showAlert('Impossible de charger ce fichier (vérifiez l\'ID et l\'API).', 'error');
+          });
+      }
+
+      /* ── Aperçu ── */
       function renderPreview(fichier) {
         var container = document.getElementById('preview-container');
         if (!container || !window.StudyShareApi) return;
+
+        /* L'aperçu (preview) passe aussi par la route protégée — on envoie credentials */
         var previewUrl = window.StudyShareApi.previewUrlPourFid(fileId);
         var ext = extensionDepuisLien(fichier && fichier.lien_access);
 
         if (!ext) {
           container.innerHTML = '<p class="text-muted">Aperçu indisponible (extension inconnue).</p>';
+          return;
+        }
+
+        /* Non connecté : bloquer l'aperçu aussi */
+        if (!sessionUser || !sessionUser.logged_in) {
+          container.innerHTML = '<p class="text-muted">Connectez-vous pour voir l\'aperçu de ce document.</p>';
           return;
         }
 
@@ -154,101 +238,205 @@
         }
 
         if (['txt', 'md', 'csv'].indexOf(ext) !== -1) {
-          fetch(previewUrl).then(function (res) { return res.text(); }).then(function (text) {
-            var safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            container.innerHTML = '<pre style="max-height:520px;overflow:auto;background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap;">' + safe + '</pre>';
-          }).catch(function () {
-            container.innerHTML = '<p class="text-muted">Impossible de charger l’aperçu texte.</p>';
-          });
+          fetch(previewUrl, { credentials: 'include' })
+            .then(function (res) {
+              if (res.status === 401) {
+                container.innerHTML = '<p class="text-muted">Connectez-vous pour voir l\'aperçu.</p>';
+                return;
+              }
+              if (res.status === 403) {
+                return res.json().then(function (d) {
+                  container.innerHTML = '<p class="text-muted">' + (d.message || 'Quota atteint.') + '</p>';
+                });
+              }
+              return res.text().then(function (text) {
+                var safe = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                container.innerHTML = '<pre style="max-height:520px;overflow:auto;background:#fafafa;border:1px solid #ddd;border-radius:8px;padding:12px;white-space:pre-wrap;">' + safe + '</pre>';
+              });
+            })
+            .catch(function () {
+              container.innerHTML = '<p class="text-muted">Impossible de charger l\'aperçu texte.</p>';
+            });
           return;
         }
 
         container.innerHTML = '<p class="text-muted">Aperçu non supporté pour .' + ext + '. Utilisez le bouton Télécharger.</p>';
       }
 
-      if (window.StudyShareApi && fileId) {
-        window.StudyShareApi.getFichier(fileId).then(function (data) {
-          var f = data && data.fichier;
-          fichierCourant = f;
-          if (!f) return;
-          var mapped = window.StudyShareApi.mapFichierPourUi(f);
-          if (badgeType) {
-            badgeType.textContent = f.type || '';
-            badgeType.className = 'file-type-badge ' + (typeClass[f.type] || '');
+      /* ── Téléchargement ── */
+      function gererTelecharger() {
+        if (!fileId) return;
+
+        /* 1. Vérifier la session en temps réel */
+        verifierSession().then(function (session) {
+          if (!session.logged_in) {
+            showAlert('Vous devez être connecté pour télécharger ce fichier.', 'error');
+            setTimeout(function () { window.location.href = 'connexion.html'; }, 1800);
+            return;
           }
-          if (docTitle) docTitle.textContent = mapped.titre;
-          if (docCours) docCours.textContent = mapped.cours;
-          if (docDate) docDate.textContent = formatDate(mapped.date);
-          if (docNote) {
-            if (mapped.note > 0) {
-              docNote.textContent = '★'.repeat(mapped.note) + '☆'.repeat(5 - mapped.note);
-              docNote.setAttribute('aria-label', 'Note : ' + mapped.note + ' sur 5');
-            } else {
-              docNote.textContent = 'Pas encore noté';
-            }
-          }
-          if (btnDownload) btnDownload.disabled = false;
-          renderPreview(f);
-        }).catch(function () {
-          if (docTitle) docTitle.textContent = 'Document introuvable';
-          window.StudyShare.showAlert('Impossible de charger ce fichier (vérifiez l’ID et l’API).', 'error', alertContainer);
+
+          /* 2. Envoyer la requête de téléchargement — Flask vérifie quota côté serveur */
+          var downloadUrl = window.StudyShareApi.downloadUrlPourFid(fileId);
+
+          fetch(downloadUrl, { credentials: 'include' })
+            .then(function (res) {
+              if (res.status === 401) {
+                showAlert('Session expirée. Veuillez vous reconnecter.', 'error');
+                setTimeout(function () { window.location.href = 'connexion.html'; }, 1800);
+                return;
+              }
+
+              if (res.status === 403) {
+                /* Quota atteint ou accès refusé — afficher le message du serveur */
+                return res.json().then(function (data) {
+                  showAlert(data.message || 'Accès refusé.', 'error');
+                });
+              }
+
+              if (!res.ok) {
+                showAlert('Erreur lors du téléchargement. Réessayez.', 'error');
+                return;
+              }
+
+              /* 3. Déclencher le téléchargement depuis le Blob */
+              return res.blob().then(function (blob) {
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                /* Récupérer le nom de fichier depuis Content-Disposition si dispo */
+                a.download = 'document';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+              });
+            })
+            .catch(function () {
+              showAlert('Erreur réseau lors du téléchargement.', 'error');
+            });
         });
-      } else if (docTitle) {
-        docTitle.textContent = 'Paramètre id manquant';
       }
 
-      if (form && window.StudyShare && window.StudyShare.validation && window.StudyShareApi) {
+      /* ── Chargement des avis existants ── */
+      function chargerAvis() {
+        if (!window.StudyShareApi || !fileId) return;
+
+        fetch('/api/fichiers/' + encodeURIComponent(fileId) + '/reviews', {
+          credentials: 'include'
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data || !data.data) return;
+            var reviews = data.data.reviews || [];
+            var placeholder = document.getElementById('reviews-placeholder');
+            if (placeholder) placeholder.remove();
+
+            if (reviews.length === 0) {
+              reviewsList.innerHTML = '<p class="text-muted card-meta">Aucun avis pour ce document. Soyez le premier !</p>';
+              return;
+            }
+
+            reviewsList.innerHTML = '';
+            reviews.forEach(function (r) {
+              var note = parseInt(r.note, 10) || 0;
+              var stars = note > 0
+                ? ('★'.repeat(note) + '☆'.repeat(5 - note))
+                : '—';
+
+              var div = document.createElement('div');
+              div.style.cssText = 'border-bottom:1px solid var(--color-border-tertiary,#eee);padding:12px 0;';
+              div.innerHTML =
+                '<p class="stars" style="margin:0 0 4px">' + stars + '</p>' +
+                '<p style="margin:0 0 2px;font-weight:500">' + escapeHtml(r.titre || '') + '</p>' +
+                '<p class="text-muted card-meta" style="margin:0 0 4px">' + escapeHtml(r.commentaire || '') + '</p>' +
+                '<p class="text-muted" style="font-size:12px;margin:0">' +
+                  escapeHtml(r.nom || 'Étudiant') + ' — ' + formatDate(r.date_de_mise_enligne) +
+                '</p>';
+              reviewsList.appendChild(div);
+            });
+          })
+          .catch(function () {
+            /* Silencieux : les avis sont un bonus, pas bloquant */
+          });
+      }
+
+      function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      /* ── Formulaire d'avis ── */
+      function initialiserFormReview() {
+        if (!form || !window.StudyShare || !window.StudyShare.validation || !window.StudyShareApi) return;
+
         form.addEventListener('submit', function (e) {
           e.preventDefault();
-          var v = window.StudyShare.validation;
-          window.StudyShare.clearFormErrors(form);
-          while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
 
-          var user = window.StudyShareApi.getCurrentUser();
-          if (!user || !user.eid) {
-            window.StudyShare.showAlert('Connectez-vous pour publier un avis.', 'error', alertContainer);
-            return;
-          }
+          /* Vérifier la session Flask en temps réel avant de soumettre */
+          verifierSession().then(function (session) {
+            if (!session.logged_in) {
+              showAlert('Connectez-vous pour publier un avis.', 'error');
+              return;
+            }
 
-          var noteResult = v.validateNote(noteEl ? noteEl.value : '');
-          var titreResult = v.validateTitre(titreEl ? titreEl.value : '', true);
-          var commentResult = v.validateComment(commentEl ? commentEl.value : '', true);
+            var v = window.StudyShare.validation;
+            window.StudyShare.clearFormErrors(form);
+            while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
 
-          var hasError = false;
-          if (!noteResult.valid) { window.StudyShare.setFieldError(noteEl, noteResult.message); hasError = true; }
-          if (!titreResult.valid) { window.StudyShare.setFieldError(titreEl, titreResult.message); hasError = true; }
-          if (!commentResult.valid) { window.StudyShare.setFieldError(commentEl, commentResult.message); hasError = true; }
+            var noteResult    = v.validateNote(noteEl ? noteEl.value : '');
+            var titreResult   = v.validateTitre(titreEl ? titreEl.value : '', true);
+            var commentResult = v.validateComment(commentEl ? commentEl.value : '', true);
 
-          if (hasError) {
-            var alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-error';
-            alertDiv.setAttribute('role', 'alert');
-            alertDiv.textContent = 'Veuillez corriger les erreurs ci-dessous.';
-            alertContainer.appendChild(alertDiv);
-            return;
-          }
+            var hasError = false;
+            if (!noteResult.valid)    { window.StudyShare.setFieldError(noteEl, noteResult.message);       hasError = true; }
+            if (!titreResult.valid)   { window.StudyShare.setFieldError(titreEl, titreResult.message);     hasError = true; }
+            if (!commentResult.valid) { window.StudyShare.setFieldError(commentEl, commentResult.message); hasError = true; }
 
-          window.StudyShareApi.postReview({
-            eid: user.eid,
-            fid: parseInt(fileId, 10),
-            note: parseInt(noteEl.value, 10),
-            titre: titreEl.value.trim(),
-            commentaire: commentEl.value.trim()
-          }).then(function () {
-            window.StudyShare.showAlert('Avis enregistré.', 'success', alertContainer);
-            form.reset();
-          }).catch(function (err) {
-            window.StudyShare.showAlert(err.message || 'Échec de l’enregistrement.', 'error', alertContainer);
+            if (hasError) {
+              showAlert('Veuillez corriger les erreurs ci-dessous.', 'error');
+              return;
+            }
+
+            window.StudyShareApi.postReview({
+              eid:         session.user_id,
+              fid:         parseInt(fileId, 10),
+              note:        parseInt(noteEl.value, 10),
+              titre:       titreEl.value.trim(),
+              commentaire: commentEl.value.trim()
+            })
+              .then(function () {
+                showAlert('Avis enregistré avec succès.', 'success');
+                form.reset();
+                chargerAvis(); /* Rafraîchir la liste */
+              })
+              .catch(function (err) {
+                showAlert(err.message || 'Échec de l\'enregistrement.', 'error');
+              });
           });
         });
       }
 
-      if (btnDownload && window.StudyShareApi) {
-        btnDownload.addEventListener('click', function () {
-          if (!fileId) return;
-          window.location.href = window.StudyShareApi.downloadUrlPourFid(fileId);
-        });
+      /* ── Initialisation ── */
+      if (btnDownload) {
+        btnDownload.addEventListener('click', gererTelecharger);
       }
+
+      initialiserFormReview();
+
+      /*
+       * Ordre d'initialisation :
+       * 1. Vérifier la session Flask (source de vérité)
+       * 2. Charger les métadonnées du fichier (affiche ou bloque l'aperçu selon session)
+       * 3. Charger les avis existants
+       */
+      verifierSession().then(function () {
+        chargerFichier();
+        chargerAvis();
+      });
+
     })();
   </script>
 </body>

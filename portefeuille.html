@@ -37,7 +37,7 @@
 
       <div class="card">
         <h2 class="card-title">Solde actuel</h2>
-        <p class="card-meta" id="solde-affichage">25,00 $</p>
+        <p class="card-meta" id="solde-affichage">—</p>
         <p class="text-muted" id="wallet-hint">Solde synchronisé avec l’API.</p>
       </div>
 
@@ -65,7 +65,13 @@
       <section class="card mt-2">
         <h2>Abonnement Premium</h2>
         <p class="text-muted">Le passage en Premium coûte 20,00 $ et est déduit de votre solde.</p>
-        <button type="button" class="btn btn-primary" id="btn-premium">Devenir Premium (20,00 $)</button>
+        <div id="section-devenir-premium">
+          <button type="button" class="btn btn-primary" id="btn-premium">Devenir Premium (20,00 $)</button>
+        </div>
+        <div id="section-desabonner" style="display:none;">
+          <p class="text-muted">Vous êtes actuellement abonné Premium. Vous pouvez annuler votre abonnement ci-dessous.</p>
+          <button type="button" class="btn btn-secondary" id="btn-desabonner">Se désabonner du Premium</button>
+        </div>
       </section>
     </div>
   </main>
@@ -79,114 +85,148 @@
   </footer>
 
   <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/validation.js"></script>
   <script src="js/app.js"></script>
   <script>
     (function () {
       'use strict';
-      var form = document.getElementById('form-fonds');
+
       var alertContainer = document.getElementById('alert-container');
-      var montantEl = form && form.querySelector('#montant');
-      var paymentEl = form && form.querySelector('#payment_mthd');
-      var soldeEl = document.getElementById('solde-affichage');
-      var statutEl = document.getElementById('statut-premium');
-      var btnPremium = document.getElementById('btn-premium');
+      var soldeEl        = document.getElementById('solde-affichage');
+      var statutEl       = document.getElementById('statut-premium');
+      var form           = document.getElementById('form-fonds');
+      var montantEl      = document.getElementById('montant');
+      var btnPremium     = document.getElementById('btn-premium');
+      var sectionPremium = document.getElementById('section-devenir-premium');
+      var sectionDesabo  = document.getElementById('section-desabonner');
+      var btnDesabo      = document.getElementById('btn-desabonner');
 
-      if (!form || !window.StudyShare || !window.StudyShare.validation || !window.StudyShareApi) return;
-      var v = window.StudyShare.validation;
+      var eid = null;
 
-      function refreshAffichage(user, wallet) {
-        if (statutEl) {
-          statutEl.textContent = user && user.premium ? 'Oui' : 'Non';
-        }
-        if (soldeEl && wallet && wallet.solde != null) {
-          soldeEl.textContent = parseFloat(wallet.solde).toFixed(2).replace('.', ',') + ' $';
-        }
-      }
-
-      function chargerPortefeuille() {
-        var user = window.StudyShareApi.getCurrentUser();
-        if (!user || !user.eid) {
-          if (soldeEl) soldeEl.textContent = '—';
-          window.StudyShare.showAlert('Connectez-vous pour afficher et modifier votre portefeuille.', 'info', alertContainer);
-          var sub = form.querySelector('button[type="submit"]');
-          if (sub) sub.disabled = true;
-          if (btnPremium) btnPremium.disabled = true;
-          return;
-        }
-        refreshAffichage(user, null);
-        window.StudyShareApi.getWallet(user.eid).then(function (data) {
-          var w = data && data.wallet;
-          refreshAffichage(user, w);
-        }).catch(function () {
-          window.StudyShare.showAlert('Impossible de charger le solde (API ou base de données).', 'error', alertContainer);
-        });
-      }
-
-      chargerPortefeuille();
-
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        window.StudyShare.clearFormErrors(form);
+      function afficherAlerte(msg, type) {
         while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+        var d = document.createElement('div');
+        d.className = 'alert alert-' + (type || 'info');
+        d.textContent = msg;
+        alertContainer.appendChild(d);
+      }
 
-        var user = window.StudyShareApi.getCurrentUser();
-        if (!user || !user.eid) {
-          window.StudyShare.showAlert('Vous devez être connecté.', 'error', alertContainer);
-          return;
-        }
+      /* ── GET solde ── */
+      function chargerSolde() {
+        fetch('/api/wallet/' + eid, { credentials: 'include' })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.wallet && d.wallet.solde != null) {
+              soldeEl.textContent = parseFloat(d.wallet.solde).toFixed(2).replace('.', ',') + ' $';
+            }
+          });
+      }
 
-        var montantResult = v.validateMontant(montantEl ? montantEl.value : '');
-        var paymentVal = paymentEl ? paymentEl.value : '';
-        var paymentValid = paymentVal.length > 0;
-
-        var hasError = false;
-        if (!montantResult.valid) { window.StudyShare.setFieldError(montantEl, montantResult.message); hasError = true; }
-        if (!paymentValid) { window.StudyShare.setFieldError(paymentEl, 'Veuillez sélectionner une méthode de paiement.'); hasError = true; }
-
-        if (hasError) {
-          var alertDiv = document.createElement('div');
-          alertDiv.className = 'alert alert-error';
-          alertDiv.setAttribute('role', 'alert');
-          alertDiv.textContent = 'Veuillez corriger les erreurs ci-dessous.';
-          alertContainer.appendChild(alertDiv);
-          return;
-        }
-
-        var ajout = parseFloat(String(montantEl.value).replace(',', '.'));
-        window.StudyShareApi.depotWallet(user.eid, ajout).then(function () {
-          return window.StudyShareApi.getWallet(user.eid);
-        }).then(function (data) {
-          refreshAffichage(user, data.wallet);
-          window.StudyShare.showAlert('Fonds ajoutés avec succès.', 'success', alertContainer);
-          form.reset();
-        }).catch(function (err) {
-          window.StudyShare.showAlert(err.message || 'Dépôt refusé.', 'error', alertContainer);
-        });
-      });
-
-      if (btnPremium) {
-        btnPremium.addEventListener('click', function () {
-          var user = window.StudyShareApi.getCurrentUser();
-          if (!user || !user.eid) {
-            window.StudyShare.showAlert('Connectez-vous d’abord.', 'error', alertContainer);
+      /* ── Initialisation : session → solde ── */
+      fetch('/api/session-check', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (s) {
+          if (!s.logged_in) {
+            afficherAlerte('Connectez-vous pour accéder à votre portefeuille.', 'info');
+            if (form)       form.querySelector('button[type="submit"]').disabled = true;
+            if (btnPremium) btnPremium.disabled = true;
+            if (btnDesabo)  btnDesabo.disabled  = true;
             return;
           }
-          btnPremium.disabled = true;
-          window.StudyShareApi.devenirPremium(user.eid).then(function () {
-            user.premium = 1;
-            window.StudyShareApi.setCurrentUser(user);
-            return window.StudyShareApi.getWallet(user.eid);
-          }).then(function (data) {
-            refreshAffichage(window.StudyShareApi.getCurrentUser(), data.wallet);
-            window.StudyShare.showAlert('Abonnement Premium activé.', 'success', alertContainer);
-          }).catch(function (err) {
-            window.StudyShare.showAlert(err.message || 'Impossible d’activer Premium.', 'error', alertContainer);
-          }).then(function () {
-            btnPremium.disabled = false;
-          });
+          eid = s.user_id;
+          statutEl.textContent = s.premium ? 'Oui' : 'Non';
+          sectionPremium.style.display = s.premium ? 'none' : '';
+          sectionDesabo.style.display  = s.premium ? ''     : 'none';
+          chargerSolde();
+        });
+
+      /* ── POST ajout de fonds ── */
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          if (!eid) { afficherAlerte('Connectez-vous.', 'error'); return; }
+
+          var montant = parseFloat(montantEl.value);
+          if (isNaN(montant) || montant <= 0) {
+            afficherAlerte('Entrez un montant valide supérieur à 0.', 'error');
+            return;
+          }
+
+          fetch('/api/wallet/depot', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eid: eid, montant: montant })
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d.status === 'success') {
+                afficherAlerte('Fonds ajoutés avec succès.', 'success');
+                form.reset();
+                chargerSolde();
+              } else {
+                afficherAlerte(d.message || 'Dépôt refusé.', 'error');
+              }
+            });
         });
       }
+
+      /* ── POST devenir premium ── */
+      if (btnPremium) {
+        btnPremium.addEventListener('click', function () {
+          if (!eid) { afficherAlerte('Connectez-vous.', 'error'); return; }
+          btnPremium.disabled = true;
+
+          fetch('/api/devenir-premium', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eid: eid })
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d.status === 'success') {
+                statutEl.textContent = 'Oui';
+                sectionPremium.style.display = 'none';
+                sectionDesabo.style.display  = '';
+                afficherAlerte('Abonnement Premium activé.', 'success');
+                chargerSolde();
+              } else {
+                afficherAlerte(d.message || 'Impossible d\’activer Premium.', 'error');
+                btnPremium.disabled = false;
+              }
+            });
+        });
+      }
+
+      /* ── POST se désabonner ── */
+      if (btnDesabo) {
+        btnDesabo.addEventListener('click', function () {
+          if (!eid) return;
+          if (!confirm('Confirmer l\’annulation de votre abonnement Premium ?')) return;
+          btnDesabo.disabled = true;
+
+          fetch('/api/se-desabonner', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d.status === 'success') {
+                statutEl.textContent = 'Non';
+                sectionPremium.style.display = '';
+                sectionDesabo.style.display  = 'none';
+                afficherAlerte('Abonnement annulé.', 'success');
+              } else {
+                afficherAlerte(d.message || 'Impossible d\’annuler.', 'error');
+              }
+              btnDesabo.disabled = false;
+            });
+        });
+      }
+
     })();
   </script>
 </body>

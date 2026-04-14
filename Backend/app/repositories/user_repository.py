@@ -167,9 +167,7 @@ def get_wallet_by_eid(eid):
     conn = get_db_connection()
     try:
         cursor = conn.cursor(dictionary=True)
-        # Note : Dans ton script SQL, wid semble correspondre à l'eid
-        query = "SELECT * FROM Wallets WHERE eid = %s"
-        cursor.execute(query, (eid,))
+        cursor.execute("SELECT wid, eid, CAST(solde AS FLOAT) as solde FROM Wallets WHERE eid = %s", (eid,))
         return cursor.fetchone()
     finally:
         conn.close()
@@ -193,5 +191,71 @@ def enregistrer_abonnement(eid, cout, duree_mois=6):
     except Exception as e:
         print(f"❌ Erreur SQL Abonnements : {e}")
         return False
+    finally:
+        conn.close()
+
+def get_user_by_id(eid):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT eid, premium FROM Etudiants WHERE eid = %s", (eid,))
+        return cursor.fetchone()
+    finally:
+        conn.close()
+
+def get_user_details(eid):
+    """Retourne nom, courriel, université et statut premium de l'étudiant."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT e.eid, e.nom, e.courriel, e.premium, u.nom AS nom_universite
+            FROM Etudiants e
+            LEFT JOIN Universite u ON e.uid = u.uid
+            WHERE e.eid = %s
+            """,
+            (eid,)
+        )
+        return cursor.fetchone()
+    finally:
+        conn.close()
+
+def a_deja_accede(eid, fid):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT aid FROM Acceder WHERE eid = %s AND fid = %s",
+            (eid, fid)
+        )
+        return cursor.fetchone() is not None
+    finally:
+        conn.close()
+
+def annuler_premium_db(eid):
+    """Remet le statut premium à 0."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE Etudiants SET premium = 0 WHERE eid = %s", (eid,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Erreur SQL annuler premium : {e}")
+        return False
+    finally:
+        conn.close()
+
+def compter_fichiers_uniques(eid):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT COUNT(DISTINCT fid) as total FROM Acceder WHERE eid = %s",
+            (eid,)
+        )
+        row = cursor.fetchone()
+        return row['total'] if row else 0
     finally:
         conn.close()
