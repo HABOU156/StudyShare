@@ -62,6 +62,15 @@ def download_fichier_par_fid(fid):
         return response
     return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404
 
+
+
+@file_bp.route('/api/fichiers/<int:fid>/preview', methods=['GET'])
+def preview_fichier_par_fid(fid):
+    response = file_service.recuperer_fichier_par_fid(fid, as_attachment=False)
+    if response:
+        return response
+    return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404
+
 @file_bp.route('/api/fichiers/recherche', methods=['GET'])
 def rechercher_fichiers():
     # On récupère les paramètres de l'URL (ex: ?cid=1&type=Cours)

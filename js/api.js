@@ -173,6 +173,10 @@
 
     downloadUrlPourFid: function (fid) {
       return getBase() + '/api/fichiers/' + encodeURIComponent(fid) + '/download';
+    },
+
+    previewUrlPourFid: function (fid) {
+      return getBase() + '/api/fichiers/' + encodeURIComponent(fid) + '/preview';
     }
   };
 })();
