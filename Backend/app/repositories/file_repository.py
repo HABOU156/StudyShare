@@ -36,6 +36,79 @@ def get_tous_les_fichiers():
     finally:
         conn.close()
 
+
+def get_fichiers_avec_cours_et_note():
+    """Liste des fichiers avec sigle du cours et note moyenne (0 si aucune review)."""
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT f.fid, f.lien_access, f.type, f.cid, f.mise_en_ligne, c.sigle AS sigle_cours,
+                   COALESCE(
+                       (SELECT ROUND(AVG(r.note)) FROM Reviews r WHERE r.fid = f.fid),
+                       0
+                   ) AS note_moyenne
+            FROM Fichiers f
+            LEFT JOIN Cours c ON f.cid = c.cid
+            ORDER BY f.mise_en_ligne DESC
+            """
+        )
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+
+def get_fichier_detail(fid):
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT f.fid, f.lien_access, f.type, f.cid, f.mise_en_ligne, c.sigle AS sigle_cours,
+                   COALESCE(
+                       (SELECT ROUND(AVG(r.note)) FROM Reviews r WHERE r.fid = f.fid),
+                       0
+                   ) AS note_moyenne
+            FROM Fichiers f
+            LEFT JOIN Cours c ON f.cid = c.cid
+            WHERE f.fid = %s
+            """,
+            (fid,),
+        )
+        return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+def get_lien_access_par_fid(fid):
+    conn = get_db_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT lien_access FROM Fichiers WHERE fid = %s", (fid,))
+        row = cursor.fetchone()
+        return row["lien_access"] if row else None
+    finally:
+        conn.close()
+
+
+def get_all_cours():
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT cid, sigle FROM Cours ORDER BY sigle")
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
 def rechercher_fichiers_db(cid=None, type_fichier=None):
     conn = get_db_connection()
     try:

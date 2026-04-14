@@ -1,8 +1,16 @@
 from flask import Blueprint, request, jsonify
 from app.services import user_service
+from app.repositories import user_repository
 
 # On utilise un Blueprint pour organiser les routes
 user_bp = Blueprint('user_bp', __name__)
+
+
+@user_bp.route('/api/universites', methods=['GET'])
+def lister_universites():
+    rows = user_repository.list_universites()
+    return jsonify({"status": "success", "universites": rows}), 200
+
 
 @user_bp.route('/api/acceder-fichier', methods=['POST'])
 def acceder_fichier():

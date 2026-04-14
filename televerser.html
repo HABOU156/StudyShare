@@ -42,8 +42,17 @@
         </div>
 
         <div class="form-group">
-          <label for="cours">Cours</label>
-          <input type="text" id="cours" name="cours" required maxlength="200" placeholder="Ex. BDD 101">
+          <label for="cid">Cours (sigle en base)</label>
+          <select id="cid" name="cid" required>
+            <option value="">Chargement…</option>
+          </select>
+          <span class="form-help">Liste des cours présents dans la base StudyShare.</span>
+          <span class="form-error" role="alert"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="titre">Titre affiché (facultatif)</label>
+          <input type="text" id="titre" name="titre" maxlength="200" placeholder="Laissez vide pour dériver du nom du fichier">
           <span class="form-error" role="alert"></span>
         </div>
 
@@ -71,6 +80,7 @@
     </div>
   </footer>
 
+  <script src="js/api.js"></script>
   <script src="js/validation.js"></script>
   <script src="js/app.js"></script>
   <script>
@@ -79,12 +89,28 @@
       var form = document.getElementById('form-televerser');
       var alertContainer = document.getElementById('alert-container');
       var typeEl = form && form.querySelector('#type');
-      var coursEl = form && form.querySelector('#cours');
+      var cidEl = form && form.querySelector('#cid');
+      var titreEl = form && form.querySelector('#titre');
       var fichierEl = form && form.querySelector('#fichier');
       var btnSubmit = document.getElementById('btn-submit');
 
-      if (!form || !window.StudyShare || !window.StudyShare.validation) return;
+      if (!form || !window.StudyShare || !window.StudyShare.validation || !window.StudyShareApi) return;
       var v = window.StudyShare.validation;
+
+      window.StudyShareApi.getCours().then(function (data) {
+        if (!cidEl) return;
+        cidEl.innerHTML = '<option value="">Choisir un cours…</option>';
+        var list = (data && data.cours) ? data.cours : [];
+        list.forEach(function (c) {
+          var opt = document.createElement('option');
+          opt.value = String(c.cid);
+          opt.textContent = c.sigle;
+          cidEl.appendChild(opt);
+        });
+      }).catch(function () {
+        if (cidEl) cidEl.innerHTML = '<option value="">Erreur de chargement</option>';
+        window.StudyShare.showAlert('Impossible de charger la liste des cours (API indisponible).', 'error', alertContainer);
+      });
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -92,16 +118,14 @@
         while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
 
         var typeResult = v.validateTypeFichier(typeEl ? typeEl.value : '');
-        var coursStr = coursEl ? coursEl.value : '';
-        var coursValid = coursStr.trim().length > 0 && coursStr.length <= 200;
+        var cidOk = cidEl && cidEl.value.trim().length > 0;
+        var titreResult = v.validateTitre(titreEl ? titreEl.value : '', false);
         var fileResult = v.validateFileUpload(fichierEl && fichierEl.files && fichierEl.files[0]);
 
         var hasError = false;
         if (!typeResult.valid) { window.StudyShare.setFieldError(typeEl, typeResult.message); hasError = true; }
-        if (!coursValid) {
-          window.StudyShare.setFieldError(coursEl, !coursStr.trim() ? 'Le cours est requis.' : 'Le nom du cours ne doit pas dépasser 200 caractères.');
-          hasError = true;
-        }
+        if (!cidOk) { window.StudyShare.setFieldError(cidEl, 'Choisissez un cours.'); hasError = true; }
+        if (!titreResult.valid) { window.StudyShare.setFieldError(titreEl, titreResult.message); hasError = true; }
         if (!fileResult.valid) { window.StudyShare.setFieldError(fichierEl, fileResult.message); hasError = true; }
 
         if (hasError) {
@@ -113,14 +137,23 @@
           return;
         }
 
+        var fd = new FormData();
+        fd.append('lien_access', fichierEl.files[0]);
+        fd.append('type', typeEl.value);
+        fd.append('cid', cidEl.value);
+        if (titreEl && titreEl.value.trim()) {
+          fd.append('titre', titreEl.value.trim());
+        }
+
         btnSubmit.disabled = true;
-        try {
+        window.StudyShareApi.uploadFichier(fd).then(function () {
           window.StudyShare.showAlert('Document téléversé avec succès.', 'success', alertContainer);
           form.reset();
-        } catch (err) {
-          window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
-        }
-        btnSubmit.disabled = false;
+        }).catch(function (err) {
+          window.StudyShare.showAlert(err.message || 'Échec du téléversement.', 'error', alertContainer);
+        }).then(function () {
+          btnSubmit.disabled = false;
+        });
       });
     })();
   </script>

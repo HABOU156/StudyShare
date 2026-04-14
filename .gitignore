@@ -1,0 +1,33 @@
+# Environnement virtuel
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Fichiers binaires et bibliothèques (ceux qui causaient tes conflits)
+*.so
+*.dylib
+*.dll
+
+# Distribution / Packages
+bin/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+
+# Fichiers système
+.DS_Store
+Thumbs.db

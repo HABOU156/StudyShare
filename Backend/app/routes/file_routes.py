@@ -32,9 +32,41 @@ def lister_fichiers():
     fichiers = file_service.obtenir_liste_fichiers()
     return jsonify({"status": "success", "fichiers": fichiers}), 200
 
+
+@file_bp.route('/api/fichiers/<int:fid>', methods=['GET'])
+def detail_fichier(fid):
+    row = file_service.obtenir_fichier_par_id(fid)
+    if not row:
+        return jsonify({"status": "error", "message": "Fichier introuvable"}), 404
+    return jsonify({"status": "success", "fichier": row}), 200
+
+
+@file_bp.route('/api/cours', methods=['GET'])
+def lister_cours():
+    from app.repositories import file_repository
+    cours = file_repository.get_all_cours()
+    return jsonify({"status": "success", "cours": cours}), 200
+
 @file_bp.route('/api/fichiers/download/<filename>', methods=['GET'])
 def download_fichier(filename):
     response = file_service.recuperer_fichier_physique(filename)
+    if response:
+        return response
+    return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404
+
+
+@file_bp.route('/api/fichiers/<int:fid>/download', methods=['GET'])
+def download_fichier_par_fid(fid):
+    response = file_service.recuperer_fichier_par_fid(fid)
+    if response:
+        return response
+    return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404
+
+
+
+@file_bp.route('/api/fichiers/<int:fid>/preview', methods=['GET'])
+def preview_fichier_par_fid(fid):
+    response = file_service.recuperer_fichier_par_fid(fid, as_attachment=False)
     if response:
         return response
     return jsonify({"status": "error", "message": "Fichier introuvable sur le serveur"}), 404

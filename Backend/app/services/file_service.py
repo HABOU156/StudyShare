@@ -3,8 +3,10 @@ from werkzeug.utils import secure_filename
 from app.repositories import file_repository
 from flask import send_from_directory
 
-# Dossier où les fichiers sont sauvés
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+# Dossiers de référence (priorité Backend/uploads)
+BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_ROOT, ".."))
+UPLOAD_FOLDER = os.path.join(BACKEND_ROOT, "uploads")
 
 def televerser_fichier(file, titre, type_fichier, cid):
     if not file or file.filename == '':
@@ -34,8 +36,8 @@ def televerser_fichier(file, titre, type_fichier, cid):
         return None, f"Erreur technique : {str(e)}"
 
 def recuperer_fichier_physique(filename):
-    # On pointe vers ton dossier uploads
-    directory = os.path.join(os.getcwd(), 'uploads')
+    # On pointe vers Backend/uploads
+    directory = UPLOAD_FOLDER
     try:
         # On vérifie si le fichier existe avant d'envoyer
         return send_from_directory(directory, filename, as_attachment=True)
@@ -47,7 +49,53 @@ def chercher_fichiers(cid=None, type_fichier=None):
 
 def obtenir_liste_fichiers():
     from app.repositories import file_repository
-    return file_repository.get_tous_les_fichiers()
+    return file_repository.get_fichiers_avec_cours_et_note()
+
+
+def obtenir_fichier_par_id(fid):
+    from app.repositories import file_repository
+    return file_repository.get_fichier_detail(fid)
+
+
+def recuperer_fichier_par_fid(fid, as_attachment=True):
+    """Envoie le fichier physique à partir du fid (chemin relatif enregistré en BD)."""
+    from app.repositories import file_repository
+    lien = file_repository.get_lien_access_par_fid(fid)
+    if not lien:
+        return None
+    return recuperer_fichier_par_chemin_relatif(lien, as_attachment=as_attachment)
+
+
+def recuperer_fichier_par_chemin_relatif(lien_access, as_attachment=True):
+    if not lien_access:
+        return None
+    lien_access = lien_access.replace("\\", "/").lstrip("/")
+    # Compatibilité: accepte chemins DB de type "uploads/x.pdf" et "Backend/uploads/x.pdf"
+    candidates = [
+        os.path.normpath(os.path.join(PROJECT_ROOT, lien_access)),
+        os.path.normpath(os.path.join(BACKEND_ROOT, lien_access)),
+    ]
+    # Données SQL historiques: lien_access = "fichiers/xxx.pdf"
+    # Fichiers réels présents dans Backend/uploads/xxx.pdf
+    if lien_access.startswith("fichiers/"):
+        candidates.insert(0, os.path.normpath(os.path.join(UPLOAD_FOLDER, os.path.basename(lien_access))))
+    if lien_access.startswith("uploads/"):
+        candidates.insert(0, os.path.normpath(os.path.join(BACKEND_ROOT, lien_access[len("uploads/"):])))
+    if lien_access.startswith("Backend/uploads/"):
+        candidates.insert(0, os.path.normpath(os.path.join(PROJECT_ROOT, lien_access)))
+
+    for full in candidates:
+        if not (full.startswith(PROJECT_ROOT) or full.startswith(BACKEND_ROOT)):
+            continue
+        if not os.path.isfile(full):
+            continue
+        directory = os.path.dirname(full)
+        basename = os.path.basename(full)
+        try:
+            return send_from_directory(directory, basename, as_attachment=as_attachment)
+        except FileNotFoundError:
+            continue
+    return None
 
 # Dans app/services/file_service.py
 

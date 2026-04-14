@@ -52,40 +52,9 @@
         <button type="button" class="btn btn-secondary" id="btn-reset">Réinitialiser</button>
       </div>
 
-      <div id="files-list" class="files-grid">
-        <a href="fichier-detail.html?id=1" class="file-card">
-          <div class="card">
-            <span class="file-type-badge file-type-cours">Cours</span>
-            <h3 class="card-title">Introduction à la base de données</h3>
-            <p class="card-meta">BDD 101 — Mis en ligne le 12/03/2025</p>
-            <p class="stars" aria-label="Note : 4 sur 5">★★★★☆</p>
-          </div>
-        </a>
-        <a href="fichier-detail.html?id=2" class="file-card">
-          <div class="card">
-            <span class="file-type-badge file-type-resume">Résumé</span>
-            <h3 class="card-title">Résumé chapitres 1-5</h3>
-            <p class="card-meta">Algèbre linéaire — Mis en ligne le 10/03/2025</p>
-            <p class="stars" aria-label="Note : 5 sur 5">★★★★★</p>
-          </div>
-        </a>
-        <a href="fichier-detail.html?id=3" class="file-card">
-          <div class="card">
-            <span class="file-type-badge file-type-examen">Examen</span>
-            <h3 class="card-title">Examen partiel 2024</h3>
-            <p class="card-meta">Programmation — Mis en ligne le 08/03/2025</p>
-            <p class="stars" aria-label="Note : 3 sur 5">★★★☆☆</p>
-          </div>
-        </a>
-        <a href="fichier-detail.html?id=4" class="file-card">
-          <div class="card">
-            <span class="file-type-badge file-type-exercices">Exercices</span>
-            <h3 class="card-title">Série 3 avec solutions</h3>
-            <p class="card-meta">Analyse — Mis en ligne le 05/03/2025</p>
-            <p class="stars" aria-label="Note : 4 sur 5">★★★★☆</p>
-          </div>
-        </a>
-      </div>
+      <div id="files-banner" class="mb-2" style="display: none;" role="status"></div>
+      <p id="files-loading" class="text-muted mb-2">Chargement des documents depuis le serveur…</p>
+      <div id="files-list" class="files-grid"></div>
 
       <p id="no-results" class="text-muted text-center mt-2" style="display: none;">Aucun document ne correspond à vos critères.</p>
     </div>
@@ -100,15 +69,26 @@
     </div>
   </footer>
 
+  <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script>
     (function () {
       'use strict';
-      var filesData = [
-        { id: 1, type: 'Cours', titre: 'Introduction à la base de données', cours: 'BDD 101', date: '2025-03-12', note: 4 },
-        { id: 2, type: 'Résumé', titre: 'Résumé chapitres 1-5', cours: 'Algèbre linéaire', date: '2025-03-10', note: 5 },
-        { id: 3, type: 'Examen', titre: 'Examen partiel 2024', cours: 'Programmation', date: '2025-03-08', note: 3 },
-        { id: 4, type: 'Exercices', titre: 'Série 3 avec solutions', cours: 'Analyse', date: '2025-03-05', note: 4 }
+      var filesData = [];
+      var usingDemo = false;
+
+      /* Jeu d’exemple aligné sur DB/create_db.sql si la base est vide ou l’API indisponible */
+      var DEMO_FILES = [
+        { id: 1, type: 'Cours', titre: 'IFT-1001 cours', cours: 'IFT-1001', date: '2024-01-10', note: 4 },
+        { id: 2, type: 'Résumé', titre: 'GLO-2002 resume', cours: 'GLO-2002', date: '2024-01-18', note: 4 },
+        { id: 3, type: 'Examen', titre: 'GIF-3003 examen', cours: 'GIF-3003', date: '2024-02-01', note: 3 },
+        { id: 4, type: 'Exercices', titre: 'IFT-4004 exercices', cours: 'IFT-4004', date: '2024-02-15', note: 4 },
+        { id: 5, type: 'Cours', titre: 'GLO-5005 cours', cours: 'GLO-5005', date: '2024-03-05', note: 4 },
+        { id: 6, type: 'Résumé', titre: 'GIF-6006 resume', cours: 'GIF-6006', date: '2024-03-20', note: 3 },
+        { id: 7, type: 'Examen', titre: 'IFT-7007 examen', cours: 'IFT-7007', date: '2024-04-02', note: 4 },
+        { id: 8, type: 'Exercices', titre: 'GLO-8008 exercices', cours: 'GLO-8008', date: '2024-04-12', note: 2 },
+        { id: 9, type: 'Cours', titre: 'GIF-9009 cours', cours: 'GIF-9009', date: '2024-04-22', note: 3 },
+        { id: 10, type: 'Résumé', titre: 'IFT-1000 resume', cours: 'IFT-1000', date: '2024-05-01', note: 4 }
       ];
 
       var typeSelect = document.getElementById('filter-type');
@@ -118,6 +98,20 @@
       var btnReset = document.getElementById('btn-reset');
       var filesList = document.getElementById('files-list');
       var noResults = document.getElementById('no-results');
+      var loadingEl = document.getElementById('files-loading');
+      var bannerEl = document.getElementById('files-banner');
+
+      function showBanner(type, message) {
+        if (!bannerEl) return;
+        bannerEl.style.display = 'block';
+        bannerEl.className = 'mb-2 alert alert-' + (type || 'info');
+        bannerEl.setAttribute('role', 'status');
+        bannerEl.textContent = message;
+      }
+
+      function hideBanner() {
+        if (bannerEl) bannerEl.style.display = 'none';
+      }
 
       function formatDate(str) {
         if (!str) return '';
@@ -129,7 +123,12 @@
         if (!filesList) return;
         filesList.innerHTML = '';
         if (list.length === 0) {
-          if (noResults) noResults.style.display = 'block';
+          if (noResults) {
+            noResults.style.display = 'block';
+            noResults.textContent = filesData.length > 0
+              ? 'Aucun document ne correspond à vos critères.'
+              : 'Aucun document à afficher.';
+          }
           return;
         }
         if (noResults) noResults.style.display = 'none';
@@ -143,12 +142,13 @@
           var a = document.createElement('a');
           a.href = 'fichier-detail.html?id=' + encodeURIComponent(f.id);
           a.className = 'file-card';
-          var stars = '★'.repeat(f.note) + '☆'.repeat(5 - f.note);
+          var noteLabel = f.note > 0 ? f.note : '—';
+          var stars = f.note > 0 ? ('★'.repeat(f.note) + '☆'.repeat(5 - f.note)) : 'Pas encore noté';
           a.innerHTML = '<div class="card">' +
             '<span class="file-type-badge ' + (typeClass[f.type] || '') + '">' + escapeHtml(f.type) + '</span>' +
             '<h3 class="card-title">' + escapeHtml(f.titre) + '</h3>' +
             '<p class="card-meta">' + escapeHtml(f.cours) + ' — Mis en ligne le ' + formatDate(f.date) + '</p>' +
-            '<p class="stars" aria-label="Note : ' + f.note + ' sur 5">' + stars + '</p>' +
+            '<p class="stars" aria-label="Note : ' + noteLabel + ' sur 5">' + stars + '</p>' +
             '</div>';
           filesList.appendChild(a);
         });
@@ -167,7 +167,7 @@
         var order = dateSelect ? dateSelect.value : 'recent';
         var filtered = filesData.filter(function (f) {
           if (type && f.type !== type) return false;
-          if (cours && f.cours.toLowerCase().indexOf(cours) === -1) return false;
+          if (cours && String(f.cours).toLowerCase().indexOf(cours) === -1) return false;
           return true;
         });
         filtered.sort(function (a, b) {
@@ -185,6 +185,30 @@
 
       if (btnFilter) btnFilter.addEventListener('click', applyFilters);
       if (btnReset) btnReset.addEventListener('click', resetFilters);
+
+      if (!window.StudyShareApi) return;
+      window.StudyShareApi.getFichiers().then(function (data) {
+        var rows = (data && data.fichiers) ? data.fichiers : [];
+        filesData = rows.map(function (row) {
+          return window.StudyShareApi.mapFichierPourUi(row);
+        }).filter(Boolean);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (filesData.length === 0) {
+          usingDemo = true;
+          filesData = DEMO_FILES.slice();
+          showBanner('info', 'Aucun fichier en base ou connexion MySQL vide — affichage d’exemples (même contenu que create_db.sql). Importez DB/create_db.sql pour voir les vraies données.');
+        } else {
+          usingDemo = false;
+          hideBanner();
+        }
+        renderFiles(filesData);
+      }).catch(function (err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        usingDemo = true;
+        filesData = DEMO_FILES.slice();
+        showBanner('error', 'API ou base indisponible — affichage d’exemples. Ouvrez le site via le serveur Flask et vérifiez MySQL. (' + (err && err.message ? err.message : 'erreur réseau') + ')');
+        renderFiles(filesData);
+      });
     })();
   </script>
 </body>
