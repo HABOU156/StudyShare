@@ -171,6 +171,10 @@
       });
     },
 
+    getReviewsFichier: function (fid) {
+      return requestJson('/api/fichiers/' + encodeURIComponent(fid) + '/reviews');
+    },
+
     downloadUrlPourFid: function (fid) {
       return getBase() + '/api/fichiers/' + encodeURIComponent(fid) + '/download';
     },

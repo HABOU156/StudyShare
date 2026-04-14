@@ -34,6 +34,15 @@
         <div class="mt-2">
           <button type="button" class="btn btn-primary" id="btn-ajouter-fichier">Ajouter des fichiers à cette collection</button>
         </div>
+        <section id="add-files-panel" class="mt-2" style="display: none;">
+          <h2>Choisir des fichiers à ajouter</h2>
+          <p class="text-muted">Cochez un ou plusieurs fichiers, puis confirmez l’ajout.</p>
+          <div id="add-files-list" class="card-meta" style="max-height: 280px; overflow: auto;"></div>
+          <div class="mt-2" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" id="btn-confirmer-ajout">Ajouter la sélection</button>
+            <button type="button" class="btn btn-secondary" id="btn-annuler-ajout">Annuler</button>
+          </div>
+        </section>
       </article>
 
       <section class="card">
@@ -56,14 +65,25 @@
     </div>
   </footer>
 
+  <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script>
     (function () {
       'use strict';
+      var STORAGE_KEY = 'studyshare_collections_data_v1';
       var params = new URLSearchParams(window.location.search);
       var collectionId = params.get('id');
+      var alertContainer = document.getElementById('alert-container');
+      var countEl = document.getElementById('collection-count');
+      var listEl = document.getElementById('fichiers-collection');
+      var noFichiers = document.getElementById('no-fichiers');
+      var addBtn = document.getElementById('btn-ajouter-fichier');
+      var addPanel = document.getElementById('add-files-panel');
+      var addFilesList = document.getElementById('add-files-list');
+      var confirmBtn = document.getElementById('btn-confirmer-ajout');
+      var cancelBtn = document.getElementById('btn-annuler-ajout');
 
-      var collectionsData = {
+      var defaultCollectionsData = {
         '1': {
           nom: 'Révision examens',
           dateCreation: '2025-03-10',
@@ -83,19 +103,45 @@
         }
       };
 
+      function loadCollectionsData() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return JSON.parse(JSON.stringify(defaultCollectionsData));
+          var parsed = JSON.parse(raw);
+          return parsed && typeof parsed === 'object'
+            ? parsed
+            : JSON.parse(JSON.stringify(defaultCollectionsData));
+        } catch (e) {
+          return JSON.parse(JSON.stringify(defaultCollectionsData));
+        }
+      }
+
+      function saveCollectionsData(data) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+          // Ignore quota/localStorage errors
+        }
+      }
+
+      var collectionsData = loadCollectionsData();
+
       function formatDate(str) {
         if (!str) return '';
         var d = new Date(str);
         return isNaN(d.getTime()) ? str : d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
       }
 
-      var data = collectionId ? collectionsData[collectionId] : null;
-      if (data) {
-        document.getElementById('collection-nom').textContent = data.nom;
-        document.getElementById('collection-date').textContent = formatDate(data.dateCreation);
-        document.getElementById('collection-count').textContent = data.fichiers.length;
-        var listEl = document.getElementById('fichiers-collection');
-        var noFichiers = document.getElementById('no-fichiers');
+      function escapeHtml(text) {
+        if (text == null) return '';
+        var div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+      }
+
+      function renderCollectionFiles(data) {
+        if (!data) return;
+        if (countEl) countEl.textContent = data.fichiers.length;
         if (data.fichiers.length === 0) {
           if (listEl) listEl.innerHTML = '';
           if (noFichiers) noFichiers.style.display = 'block';
@@ -115,6 +161,13 @@
             });
           }
         }
+      }
+
+      var data = collectionId ? collectionsData[collectionId] : null;
+      if (data) {
+        document.getElementById('collection-nom').textContent = data.nom;
+        document.getElementById('collection-date').textContent = formatDate(data.dateCreation);
+        renderCollectionFiles(data);
       } else {
         document.getElementById('collection-nom').textContent = 'Collection inconnue';
         document.getElementById('collection-date').textContent = '—';
@@ -123,11 +176,127 @@
         document.getElementById('no-fichiers').style.display = 'block';
       }
 
-      document.getElementById('btn-ajouter-fichier').addEventListener('click', function () {
-        if (window.StudyShare && window.StudyShare.showAlert) {
-          window.StudyShare.showAlert('En production : ouverture d\'un choix de fichiers pour les ajouter à cette collection.', 'info', document.getElementById('alert-container'));
+      function hideAddPanel() {
+        if (addPanel) addPanel.style.display = 'none';
+      }
+
+      function showAddPanel() {
+        if (addPanel) addPanel.style.display = 'block';
+      }
+
+      function mapFileToCollectionItem(row) {
+        var mapped = (window.StudyShareApi && window.StudyShareApi.mapFichierPourUi)
+          ? window.StudyShareApi.mapFichierPourUi(row)
+          : null;
+        if (!mapped) return null;
+        return {
+          fid: mapped.id,
+          titre: mapped.titre,
+          type: mapped.type || 'Document',
+          cours: mapped.cours || '—'
+        };
+      }
+
+      function buildSelectableFiles(files, currentFiles) {
+        var currentIds = {};
+        (currentFiles || []).forEach(function (f) { currentIds[String(f.fid)] = true; });
+
+        return (files || []).map(mapFileToCollectionItem).filter(Boolean).map(function (f) {
+          return {
+            item: f,
+            alreadyInCollection: !!currentIds[String(f.fid)]
+          };
+        });
+      }
+
+      function renderAddFilesList(choices) {
+        if (!addFilesList) return;
+        if (!choices || choices.length === 0) {
+          addFilesList.innerHTML = '<p class="text-muted">Aucun fichier disponible.</p>';
+          return;
         }
-      });
+        addFilesList.innerHTML = choices.map(function (c) {
+          var f = c.item;
+          var disabled = c.alreadyInCollection ? 'disabled' : '';
+          var checked = c.alreadyInCollection ? 'checked' : '';
+          var badge = c.alreadyInCollection ? ' <span class="text-muted">(déjà ajouté)</span>' : '';
+          return '<label style="display:block;padding:8px 0;border-bottom:1px solid #eee;">' +
+            '<input type="checkbox" class="add-file-checkbox" value="' + escapeHtml(String(f.fid)) + '" ' + checked + ' ' + disabled + '> ' +
+            '<strong>' + escapeHtml(f.titre) + '</strong> — ' + escapeHtml(f.type) + ' — ' + escapeHtml(f.cours) + badge +
+            '</label>';
+        }).join('');
+      }
+
+      function getSelectedFileIds() {
+        if (!addFilesList) return [];
+        var checks = addFilesList.querySelectorAll('.add-file-checkbox:checked:not([disabled])');
+        return Array.prototype.map.call(checks, function (el) { return Number(el.value); });
+      }
+
+      var lastChoices = [];
+
+      if (addBtn) {
+        addBtn.addEventListener('click', function () {
+          if (!data) return;
+          if (!window.StudyShareApi || !window.StudyShareApi.getFichiers) {
+            if (window.StudyShare && window.StudyShare.showAlert) {
+              window.StudyShare.showAlert('API indisponible pour charger les fichiers.', 'error', alertContainer);
+            }
+            return;
+          }
+
+          window.StudyShareApi.getFichiers().then(function (res) {
+            var rows = (res && res.fichiers) ? res.fichiers : [];
+            lastChoices = buildSelectableFiles(rows, data.fichiers);
+            renderAddFilesList(lastChoices);
+            showAddPanel();
+          }).catch(function (err) {
+            if (window.StudyShare && window.StudyShare.showAlert) {
+              window.StudyShare.showAlert('Impossible de charger la liste des fichiers. ' + (err && err.message ? err.message : ''), 'error', alertContainer);
+            }
+          });
+        });
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideAddPanel);
+      }
+
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', function () {
+          if (!data) return;
+          var selectedIds = getSelectedFileIds();
+          if (selectedIds.length === 0) {
+            if (window.StudyShare && window.StudyShare.showAlert) {
+              window.StudyShare.showAlert('Sélectionnez au moins un fichier à ajouter.', 'info', alertContainer);
+            }
+            return;
+          }
+
+          var selectedMap = {};
+          selectedIds.forEach(function (id) { selectedMap[String(id)] = true; });
+          var newItems = lastChoices
+            .filter(function (c) { return selectedMap[String(c.item.fid)] && !c.alreadyInCollection; })
+            .map(function (c) { return c.item; });
+
+          if (newItems.length === 0) {
+            if (window.StudyShare && window.StudyShare.showAlert) {
+              window.StudyShare.showAlert('Les fichiers sélectionnés sont déjà dans la collection.', 'info', alertContainer);
+            }
+            return;
+          }
+
+          data.fichiers = data.fichiers.concat(newItems);
+          collectionsData[String(collectionId)] = data;
+          saveCollectionsData(collectionsData);
+          renderCollectionFiles(data);
+          hideAddPanel();
+
+          if (window.StudyShare && window.StudyShare.showAlert) {
+            window.StudyShare.showAlert(newItems.length + ' fichier(s) ajouté(s) à la collection.', 'success', alertContainer);
+          }
+        });
+      }
     })();
   </script>
 </body>
