@@ -43,22 +43,8 @@
 
       <section class="card mt-2">
         <h2>Vos collections</h2>
-        <div id="collections-list" class="files-grid">
-          <a href="collection-detail.html?id=1" class="file-card">
-            <div class="card">
-              <h3 class="card-title">Révision examens</h3>
-              <p class="card-meta">Créée le 10/03/2025</p>
-              <p class="card-meta"><strong>3</strong> fichiers</p>
-            </div>
-          </a>
-          <a href="collection-detail.html?id=2" class="file-card">
-            <div class="card">
-              <h3 class="card-title">Cours BDD</h3>
-              <p class="card-meta">Créée le 05/03/2025</p>
-              <p class="card-meta"><strong>5</strong> fichiers</p>
-            </div>
-          </a>
-        </div>
+        <p id="collections-loading" class="text-muted">Chargement…</p>
+        <div id="collections-list" class="files-grid"></div>
         <p id="no-collections" class="text-muted text-center mt-2" style="display: none;">Aucune collection. Créez-en une ci-dessus.</p>
       </section>
     </div>
@@ -81,14 +67,10 @@
       'use strict';
       var form = document.getElementById('form-collection');
       var alertContainer = document.getElementById('alert-container');
-      var nomEl = form && form.querySelector('#nom-collection');
+      var nomEl = document.getElementById('nom-collection');
       var listEl = document.getElementById('collections-list');
       var noCollections = document.getElementById('no-collections');
-
-      var collections = [
-        { id: 1, nom: 'Révision examens', dateCreation: '2025-03-10', nbFichiers: 3 },
-        { id: 2, nom: 'Cours BDD', dateCreation: '2025-03-05', nbFichiers: 5 }
-      ];
+      var loadingEl = document.getElementById('collections-loading');
 
       function formatDate(str) {
         if (!str) return '';
@@ -103,25 +85,46 @@
         return div.innerHTML;
       }
 
-      function renderCollections() {
+      function renderCollections(collections) {
+        if (loadingEl) loadingEl.style.display = 'none';
         if (!listEl) return;
         listEl.innerHTML = '';
-        if (collections.length === 0) {
+        if (!collections || collections.length === 0) {
           if (noCollections) noCollections.style.display = 'block';
           return;
         }
         if (noCollections) noCollections.style.display = 'none';
         collections.forEach(function (c) {
           var a = document.createElement('a');
-          a.href = 'collection-detail.html?id=' + encodeURIComponent(c.id);
+          a.href = 'collection-detail.html?id=' + encodeURIComponent(c.col_id);
           a.className = 'file-card';
           a.innerHTML = '<div class="card">' +
             '<h3 class="card-title">' + escapeHtml(c.nom) + '</h3>' +
-            '<p class="card-meta">Créée le ' + formatDate(c.dateCreation) + '</p>' +
-            '<p class="card-meta"><strong>' + c.nbFichiers + '</strong> fichiers</p>' +
+            '<p class="card-meta">Créée le ' + formatDate(c.date_creation) + '</p>' +
+            '<p class="card-meta"><strong>' + (c.nb_fichiers || 0) + '</strong> fichiers</p>' +
             '</div>';
           listEl.appendChild(a);
         });
+      }
+
+      function chargerCollections() {
+        fetch('/api/collections', { credentials: 'include' })
+          .then(function (res) {
+            if (res.status === 401) {
+              if (loadingEl) loadingEl.style.display = 'none';
+              window.StudyShare.showAlert('Connectez-vous pour voir vos collections.', 'info', alertContainer);
+              return null;
+            }
+            return res.json();
+          })
+          .then(function (data) {
+            if (!data) return;
+            renderCollections(data.collections || []);
+          })
+          .catch(function () {
+            if (loadingEl) loadingEl.style.display = 'none';
+            window.StudyShare.showAlert('Impossible de charger les collections.', 'error', alertContainer);
+          });
       }
 
       if (form && window.StudyShare && window.StudyShare.validation) {
@@ -133,28 +136,32 @@
           var result = window.StudyShare.validation.validateNomGroupe(nomEl ? nomEl.value : '');
           if (!result.valid) {
             window.StudyShare.setFieldError(nomEl, result.message);
-            var d = document.createElement('div');
-            d.className = 'alert alert-error';
-            d.textContent = 'Veuillez corriger les erreurs.';
-            alertContainer.appendChild(d);
             return;
           }
 
-          try {
-            var nom = nomEl.value.trim();
-            var dateStr = new Date().toISOString().slice(0, 10);
-            var newId = collections.length ? Math.max.apply(null, collections.map(function (c) { return c.id; })) + 1 : 1;
-            collections.unshift({ id: newId, nom: nom, dateCreation: dateStr, nbFichiers: 0 });
-            renderCollections();
-            window.StudyShare.showAlert('Collection créée.', 'success', alertContainer);
-            form.reset();
-          } catch (err) {
-            window.StudyShare.showAlert('Une erreur est survenue.', 'error', alertContainer);
-          }
+          fetch('/api/collections', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nom: nomEl.value.trim() })
+          })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.status === 'success') {
+              window.StudyShare.showAlert('Collection créée.', 'success', alertContainer);
+              form.reset();
+              chargerCollections();
+            } else {
+              window.StudyShare.showAlert(data.message || 'Erreur lors de la création.', 'error', alertContainer);
+            }
+          })
+          .catch(function () {
+            window.StudyShare.showAlert('Erreur réseau. Réessayez.', 'error', alertContainer);
+          });
         });
       }
 
-      renderCollections();
+      chargerCollections();
     })();
   </script>
 </body>

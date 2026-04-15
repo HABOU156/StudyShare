@@ -94,3 +94,20 @@ CREATE TABLE IF NOT EXISTS Abonnements (
     PRIMARY KEY (aid),
     CONSTRAINT FK_A_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid)
 );
+
+CREATE TABLE IF NOT EXISTS Collections (
+    col_id INT AUTO_INCREMENT,
+    nom VARCHAR(100) NOT NULL,
+    date_creation DATE NOT NULL,
+    eid INT NOT NULL,
+    PRIMARY KEY (col_id),
+    CONSTRAINT FK_Col_Etudiant FOREIGN KEY (eid) REFERENCES Etudiants(eid) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS CollectionFichiers (
+    col_id INT NOT NULL,
+    fid INT NOT NULL,
+    PRIMARY KEY (col_id, fid),
+    CONSTRAINT FK_CF_Collection FOREIGN KEY (col_id) REFERENCES Collections(col_id) ON DELETE CASCADE,
+    CONSTRAINT FK_CF_Fichier FOREIGN KEY (fid) REFERENCES Fichiers(fid) ON DELETE CASCADE
+);

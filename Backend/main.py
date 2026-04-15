@@ -4,6 +4,7 @@ from flask_cors import CORS
 from app.routes.user_routes import user_bp
 from app.routes.wallet_routes import wallet_bp
 from app.routes.file_routes import file_bp
+from app.routes.collection_routes import collection_bp
 import os
 import socket
 from decimal import Decimal
@@ -49,6 +50,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 app.register_blueprint(user_bp)
 app.register_blueprint(wallet_bp)
 app.register_blueprint(file_bp)
+app.register_blueprint(collection_bp)
 
 
 @app.route('/')
