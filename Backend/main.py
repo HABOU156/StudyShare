@@ -1,3 +1,11 @@
+import os
+import socket
+from decimal import Decimal
+from datetime import date, datetime
+
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, send_from_directory, abort
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
@@ -5,11 +13,6 @@ from app.routes.user_routes import user_bp
 from app.routes.wallet_routes import wallet_bp
 from app.routes.file_routes import file_bp
 from app.routes.collection_routes import collection_bp
-import os
-import socket
-from decimal import Decimal
-from datetime import date, datetime
-
 from werkzeug.utils import safe_join
 
 
@@ -30,7 +33,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False #false pr test en local sinon true pour prod 
 app.json = UpdatedJSONProvider(app) 
-app.secret_key = 'etudiant_laval_secret_2026_key'
+app.secret_key = os.getenv('SECRET_KEY', 'etudiant_laval_secret_2026_key')
 CORS(app, resources={r"/api/*": {
     "origins": ["http://127.0.0.1:*", "http://localhost:*"], # Autorise tes ports locaux
     "methods": ["GET", "POST", "OPTIONS"],

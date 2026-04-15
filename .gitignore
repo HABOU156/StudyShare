@@ -28,6 +28,10 @@ sdist/
 var/
 wheels/
 
+# Variables d'environnement (ne jamais committer)
+.env
+*.env
+
 # Fichiers système
 .DS_Store
 Thumbs.db
