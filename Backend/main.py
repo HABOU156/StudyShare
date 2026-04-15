@@ -12,7 +12,7 @@ from datetime import date, datetime
 from werkzeug.utils import safe_join
 
 
-# --- PATCH JSON : bytes, Decimal et date MySQL ---
+# --- PATCH JSON : bytes, Decimal et date MySQL --- debugge par chatgpt a cause d une erreure de type entre flask et base de donnes 
 class UpdatedJSONProvider(DefaultJSONProvider):
     def default(self, obj):
         if isinstance(obj, bytes):
@@ -23,7 +23,7 @@ class UpdatedJSONProvider(DefaultJSONProvider):
             return obj.isoformat()
         return super().default(obj)
 # -------------------------------------------------
-
+#aussi chatgpt pour gestion de log in et log out 
 app = Flask(__name__)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -37,18 +37,15 @@ CORS(app, resources={r"/api/*": {
     "supports_credentials": True},
 }, supports_credentials=True)
 
-# Dossier racine du dépôt (parent de Backend/) — pages HTML, css/, js/
 FRONTEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-# Indique à Flask où se trouve le dossier uploads
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Crée le dossier s'il n'existe pas encore au lancement
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Enregistrement des routes API (doit rester avant les routes « catch-all » du site)
+# Enregistrement des routes API 
 app.register_blueprint(user_bp)
 app.register_blueprint(wallet_bp)
 app.register_blueprint(file_bp)
@@ -62,10 +59,7 @@ def home():
 
 @app.route('/<path:path>')
 def frontend_ou_fichiers_statiques(path):
-    """
-    Sert fichiers.html, css/styles.css, js/api.js, etc.
-    Les routes /api/* sont gérées par les blueprints (priorité plus élevée).
-    """
+    
     try:
         full = safe_join(FRONTEND_ROOT, path)
         if full is None or not os.path.isfile(full):
@@ -93,8 +87,7 @@ def _premier_port_libre(debut=5050, fin=5150):
 
 
 if __name__ == '__main__':
-    # PORT=8080 python3 main.py  → force un port précis
-    # sinon → premier libre à partir de 5050 (affiche l’URL exacte)
+    # sinon → premier libre à partir de 5050
     if os.environ.get('PORT'):
         port = int(os.environ['PORT'])
     else:

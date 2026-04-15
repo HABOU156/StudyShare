@@ -145,20 +145,41 @@
           e.preventDefault();
           window.StudyShare.clearFormErrors(formPassword);
           while (alertContainer.firstChild) alertContainer.removeChild(alertContainer.firstChild);
+
+          var currentPwd = formPassword.querySelector('#current_password').value;
           var newPwd = formPassword.querySelector('#new_password').value;
           var confirmPwd = formPassword.querySelector('#new_password_confirm').value;
+
+          if (!currentPwd) {
+            window.StudyShare.setFieldError(formPassword.querySelector('#current_password'), 'Saisissez votre mot de passe actuel.');
+            return;
+          }
+
           var result = v.validatePassword(newPwd, confirmPwd);
           if (!result.valid) {
             window.StudyShare.setFieldError(formPassword.querySelector('#new_password'), result.message);
             window.StudyShare.setFieldError(formPassword.querySelector('#new_password_confirm'), result.message);
-            var d = document.createElement('div');
-            d.className = 'alert alert-error';
-            d.textContent = 'Veuillez corriger les erreurs.';
-            alertContainer.appendChild(d);
             return;
           }
-          window.StudyShare.showAlert('Mot de passe modifié.', 'success', alertContainer);
-          formPassword.reset();
+
+          fetch('/api/changer-mot-de-passe', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ancien_password: currentPwd, nouveau_password: newPwd })
+          })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.status === 'success') {
+              window.StudyShare.showAlert(data.message || 'Mot de passe modifié.', 'success', alertContainer);
+              formPassword.reset();
+            } else {
+              window.StudyShare.showAlert(data.message || 'Erreur lors du changement.', 'error', alertContainer);
+            }
+          })
+          .catch(function () {
+            window.StudyShare.showAlert('Erreur réseau. Réessayez.', 'error', alertContainer);
+          });
         });
       }
     })();

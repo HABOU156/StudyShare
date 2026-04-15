@@ -21,7 +21,7 @@ def create_fichier(titre, lien_access, type_fichier, cid):
         conn.commit()
         return cursor.lastrowid
     except Exception as e:
-        print(f"❌ ERREUR SQL : {e}") # Regarde ton terminal pour voir ce message
+        print(f" ERREUR SQL : {e}") 
         return None
     finally:
         conn.close()
@@ -38,7 +38,7 @@ def get_tous_les_fichiers():
 
 
 def get_fichiers_avec_cours_et_note():
-    """Liste des fichiers avec sigle du cours et note moyenne (0 si aucune review)."""
+    """Liste des fichiers avec sigle du cours et note moyenne"""
     conn = get_db_connection()
     if not conn:
         return []
@@ -136,8 +136,7 @@ def ajouter_review_et_commentaire(eid, fid, note, titre, commentaire):
     try:
         cursor = conn.cursor()
         
-        # 1. Insertion dans la table Reviews
-        # On utilise CURDATE() pour la date_de_mise_enligne 
+
         query_review = """
             INSERT INTO Reviews (eid, fid, date_de_mise_enligne, note)
             VALUES (%s, %s, CURDATE(), %s)
@@ -145,7 +144,7 @@ def ajouter_review_et_commentaire(eid, fid, note, titre, commentaire):
         cursor.execute(query_review, (eid, fid, note))
         rid = cursor.lastrowid # On récupère l'ID de la review pour le commentaire
         
-        # 2. Insertion dans la table Comments
+
         query_comment = """
             INSERT INTO Comments (rid, titre, commentaire)
             VALUES (%s, %s, %s)
@@ -155,17 +154,14 @@ def ajouter_review_et_commentaire(eid, fid, note, titre, commentaire):
         conn.commit()
         return True
     except Exception as e:
-        print(f"❌ Erreur SQL Review : {e}")
+        print(f" Erreur SQL Review : {e}")
         conn.rollback()
         return False
     finally:
         conn.close()
 
 def obtenir_reviews_par_fichier(fid):
-    """
-    Récupère tous les avis et commentaires pour un fichier donné.
-    Utilise une jointure explicite entre Reviews et Comments.
-    """
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor(dictionary=True)
@@ -204,7 +200,6 @@ def rechercher_fichiers_filtres(cid=None, type_doc=None):
     conn = get_db_connection()
     try:
         cursor = conn.cursor(dictionary=True)
-        # Requête de base avec une jointure pour avoir le sigle du cours
         query = """
             SELECT F.*, C.sigle 
             FROM Fichiers F

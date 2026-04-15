@@ -1,6 +1,5 @@
 USE StudyShare;
 
--- [Exigence 39] Routine : Procédure pour l'achat de l'abonnement
 DELIMITER //
 
 CREATE PROCEDURE sp_AcheterAbonnement(IN p_eid INT, IN p_cout DECIMAL(10,2))
@@ -18,7 +17,6 @@ BEGIN
         
         SELECT 'SUCCESS' AS result;
     ELSE
-        -- [Exigence 42] Gestion des erreurs
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Fonds insuffisants pour cet achat.';
     END IF;
 END //

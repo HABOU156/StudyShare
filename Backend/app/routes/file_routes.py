@@ -6,13 +6,11 @@ file_bp = Blueprint('file_bp', __name__)
 
 @file_bp.route('/api/fichiers/upload', methods=['POST'])
 def upload_fichier():
-    # 1. Vérifie 'lien_access' car c'est le nom dans ton Postman
     if 'lien_access' not in request.files:
         return jsonify({"status": "error", "message": "Aucun fichier envoyé"}), 400
     
     fichier = request.files['lien_access']
     
-    # 2. Récupère 'type' et 'cid' (noms de ton Postman)
     type_fichier = request.form.get('type')
     cid = request.form.get('cid')
     titre = request.form.get('titre') # Facultatif si pas dans la DB
@@ -20,7 +18,6 @@ def upload_fichier():
     if not type_fichier or not cid:
         return jsonify({"status": "error", "message": "Métadonnées (type ou cid) manquantes"}), 400
 
-    # 3. Appelle le service
     fid, message = file_service.televerser_fichier(fichier, titre, type_fichier, cid)
     
     if fid:
@@ -91,7 +88,6 @@ def preview_fichier_par_fid(fid):
 
 @file_bp.route('/api/fichiers/recherche', methods=['GET'])
 def rechercher_fichiers():
-    # On récupère les paramètres de l'URL (ex: ?cid=1&type=Cours)
     cid = request.args.get('cid')
     type_fichier = request.args.get('type')
 
@@ -114,7 +110,6 @@ def poster_review():
     titre = data.get('titre')
     commentaire = data.get('commentaire')
 
-    # On s'assure qu'aucune donnée n'est manquante avant de contacter le service
     if not all([eid, fid, note, titre, commentaire]):
         return jsonify({"status": "error", "message": "Données incomplètes (eid, fid, note, titre ou commentaire manquant)."}), 400
 

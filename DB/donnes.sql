@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------
--- 2. INSERTION DES DONNÉES (DML)
+-- 2. INSERTION DES DONNÉES 
 -- ---------------------------------------------------------
 
 INSERT INTO Universite VALUES 

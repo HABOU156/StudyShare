@@ -3,7 +3,6 @@ from werkzeug.utils import secure_filename
 from app.repositories import file_repository
 from flask import send_from_directory
 
-# Dossiers de référence (priorité Backend/uploads)
 BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PROJECT_ROOT = os.path.abspath(os.path.join(BACKEND_ROOT, ".."))
 UPLOAD_FOLDER = os.path.join(BACKEND_ROOT, "uploads")
@@ -13,19 +12,11 @@ def televerser_fichier(file, titre, type_fichier, cid):
         return None, "Aucun fichier sélectionné"
 
     try:
-        # 1. Sécuriser le nom du fichier
         filename = secure_filename(file.filename)
-        
-        # 2. Créer le chemin complet pour le disque dur
         file_path = os.path.join(UPLOAD_FOLDER, filename)
-        
-        # 3. Sauvegarder physiquement le fichier
         file.save(file_path)
-
-        # 4. Préparer le chemin pour la DB (lien_access)
         db_path = f"uploads/{filename}"
         
-        # 5. Appeler le repository avec les bons arguments : titre, lien_access, type, cid
         fid = file_repository.create_fichier(titre, db_path, type_fichier, cid)
 
         if fid:
@@ -36,10 +27,8 @@ def televerser_fichier(file, titre, type_fichier, cid):
         return None, f"Erreur technique : {str(e)}"
 
 def recuperer_fichier_physique(filename):
-    # On pointe vers Backend/uploads
     directory = UPLOAD_FOLDER
     try:
-        # On vérifie si le fichier existe avant d'envoyer
         return send_from_directory(directory, filename, as_attachment=True)
     except FileNotFoundError:
         return None
@@ -70,13 +59,10 @@ def recuperer_fichier_par_chemin_relatif(lien_access, as_attachment=True):
     if not lien_access:
         return None
     lien_access = lien_access.replace("\\", "/").lstrip("/")
-    # Compatibilité: accepte chemins DB de type "uploads/x.pdf" et "Backend/uploads/x.pdf"
     candidates = [
         os.path.normpath(os.path.join(PROJECT_ROOT, lien_access)),
         os.path.normpath(os.path.join(BACKEND_ROOT, lien_access)),
     ]
-    # Données SQL historiques: lien_access = "fichiers/xxx.pdf"
-    # Fichiers réels présents dans Backend/uploads/xxx.pdf
     if lien_access.startswith("fichiers/"):
         candidates.insert(0, os.path.normpath(os.path.join(UPLOAD_FOLDER, os.path.basename(lien_access))))
     if lien_access.startswith("uploads/"):
@@ -97,18 +83,15 @@ def recuperer_fichier_par_chemin_relatif(lien_access, as_attachment=True):
             continue
     return None
 
-# Dans app/services/file_service.py
 
 def publier_avis(eid, fid, note, titre, commentaire):
     """
     Logique d'affaire : Validation et publication.
     """
     try:
-        # Validation (Exigence 60) [cite: 60]
         if not (1 <= int(note) <= 5):
             return False, "La note doit être entre 1 et 5."
 
-        # Appel au repository (On importe file_repository en haut du fichier)
         from app.repositories import file_repository
         success = file_repository.ajouter_review_et_commentaire(eid, fid, note, titre, commentaire)
         
@@ -117,7 +100,6 @@ def publier_avis(eid, fid, note, titre, commentaire):
         return False, "Échec de l'enregistrement."
 
     except Exception as e:
-        # Exigence 56 : Attraper les cas d'erreurs inattendus [cite: 56]
         print(f"Erreur : {e}")
         return False, str(e)
     
@@ -129,11 +111,9 @@ def obtenir_details_avis(fid):
         if not fid:
             return None, "ID du fichier manquant."
 
-        # On récupère les deux types d'informations
         stats = file_repository.calculer_moyenne_avis(fid)
         liste_reviews = file_repository.obtenir_reviews_par_fichier(fid)
 
-        # On formate la réponse
         data = {
             "moyenne": round(stats['moyenne'], 1) if stats['moyenne'] else 0,
             "total_avis": stats['nb_avis'],
@@ -149,10 +129,8 @@ def filtrer_fichiers(cid, type_doc):
     Logique d'affaire pour le filtrage.
     """
     try:
-        # Liste des types autorisés selon ton ENUM SQL 
         types_valides = ['Cours', 'Résumé', 'Examen', 'Exercices']
         
-        # Si un type est fourni mais qu'il n'est pas dans la liste, on le rejette
         if type_doc and type_doc not in types_valides:
             return None, "Type de document invalide."
 

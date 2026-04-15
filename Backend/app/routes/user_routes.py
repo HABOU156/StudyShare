@@ -9,7 +9,6 @@ user_bp = Blueprint('user_bp', __name__)
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Vérification de la présence de l'EID dans la session
         if 'user_id' not in session:
             return jsonify({"status": "error", "message": "Accès interdit. Connectez-vous d'abord."}), 401
         return f(*args, **kwargs)
@@ -114,7 +113,20 @@ def check_session():
         }), 200
     return jsonify({"logged_in": False}), 200
 
-# Route pour la déconnexion
+@user_bp.route('/api/changer-mot-de-passe', methods=['POST'])
+@login_required
+def changer_mot_de_passe():
+    eid = session['user_id']
+    data = request.json or {}
+    ancien = data.get('ancien_password', '')
+    nouveau = data.get('nouveau_password', '')
+    if not ancien or not nouveau:
+        return jsonify({"status": "error", "message": "Données incomplètes."}), 400
+    succes, message = user_service.changer_mot_de_passe(eid, ancien, nouveau)
+    if succes:
+        return jsonify({"status": "success", "message": message}), 200
+    return jsonify({"status": "error", "message": message}), 400
+
 @user_bp.route('/api/deconnexion', methods=['POST'])
 def deconnexion():
     session.clear() # Efface toutes les données de session [cite: 51]

@@ -1,6 +1,6 @@
--- ==========================================================
--- STUDYSHARE
--- ==========================================================
+
+--STUDYSHARE
+
 
 DROP DATABASE IF EXISTS StudyShare;
 CREATE DATABASE StudyShare;

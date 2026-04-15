@@ -1,3 +1,5 @@
+//aide chatgpt pour implementer la gestion de connection et deconnection 
+
 (function () {
   'use strict';
 
@@ -32,6 +34,5 @@
       updateNav(data && data.logged_in);
     })
     .catch(function () {
-      /* Silencieux — pas de serveur Flask actif */
     });
 })();

@@ -1,4 +1,97 @@
-<script>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Détail du fichier — StudyShare</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="index.html" class="site-logo">StudyShare</a>
+      <nav class="site-nav">
+        <a href="index.html">Accueil</a>
+        <a href="fichiers.html" class="active">Fichiers</a>
+        <a href="televerser.html">Téléverser</a>
+        <a href="portefeuille.html">Portefeuille</a>
+        <a href="collections.html">Collections</a>
+        <a href="connexion.html">Connexion</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container" style="max-width: 720px;">
+      <div id="alert-container"></div>
+      <p class="mb-2"><a href="fichiers.html">← Retour aux fichiers</a></p>
+
+      <article class="card mb-2">
+        <span id="badge-type" class="file-type-badge"></span>
+        <h1 id="doc-title" class="card-title">Chargement…</h1>
+        <p class="card-meta">Cours : <strong id="doc-cours">—</strong></p>
+        <p class="card-meta">Mis en ligne le : <span id="doc-date">—</span></p>
+        <p class="card-meta" id="doc-note">Pas encore noté</p>
+        <div class="mt-2">
+          <button type="button" class="btn btn-primary" id="btn-download" disabled>Télécharger</button>
+        </div>
+      </article>
+
+      <section class="card mb-2">
+        <h2>Aperçu</h2>
+        <div id="preview-container">
+          <p class="text-muted">Chargement de l'aperçu…</p>
+        </div>
+      </section>
+
+      <section class="card mb-2">
+        <h2>Avis</h2>
+        <div id="reviews-list">
+          <p class="text-muted card-meta">Chargement des avis…</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Laisser un avis</h2>
+        <form id="form-review">
+          <div class="form-group">
+            <label for="review-note">Note (1 à 5)</label>
+            <select id="review-note" required>
+              <option value="">— Choisir —</option>
+              <option value="1">1 — Mauvais</option>
+              <option value="2">2 — Passable</option>
+              <option value="3">3 — Correct</option>
+              <option value="4">4 — Bien</option>
+              <option value="5">5 — Excellent</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="review-titre">Titre</label>
+            <input type="text" id="review-titre" placeholder="Résumé de votre avis" required>
+          </div>
+          <div class="form-group">
+            <label for="review-comment">Commentaire</label>
+            <textarea id="review-comment" rows="4" placeholder="Décrivez votre expérience avec ce document…" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Publier l'avis</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© StudyShare</span>
+      <a href="index.html">Accueil</a>
+      <a href="fichiers.html">Fichiers</a>
+      <a href="connexion.html">Connexion</a>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
     (function () {
       'use strict';
 
@@ -20,7 +113,7 @@
       var fileId  = params.get('id') || '';
 
       /* État global de session */
-      var sessionUser = null; 
+      var sessionUser = null;
 
       var typeClass = {
         'Cours':     'file-type-cours',
@@ -62,7 +155,7 @@
         return fetch('/api/session-check', { credentials: 'include' })
           .then(function (res) { return res.json(); })
           .then(function (data) {
-            sessionUser = data; 
+            sessionUser = data;
             return data;
           })
           .catch(function () {
@@ -128,7 +221,7 @@
           .then(function (res) {
             var data = res && res.data ? res.data : {};
             renderMoyenne(data.moyenne || 0, data.total_avis || 0);
-            
+
             if (!reviewsList) return;
             var reviews = data.reviews || [];
             if (reviews.length === 0) {
@@ -207,7 +300,6 @@
               return;
             }
 
-            var v = window.StudyShare.validation;
             var noteVal = noteEl.value;
             var titreVal = titreEl.value.trim();
             var commVal = commentEl.value.trim();
@@ -240,3 +332,5 @@
 
     })();
   </script>
+</body>
+</html>

@@ -42,7 +42,6 @@ def acheter_premium(eid):
     PRIX_ABONNEMENT = 20.0 
 
     try:
-        # 1. Vérification du Wallet (Utilise le lien EID pour la cohérence) 
         wallet = wallet_repository.get_wallet_by_eid(eid)
         if not wallet:
             return False, "Portefeuille introuvable pour cet étudiant."
@@ -51,25 +50,18 @@ def acheter_premium(eid):
         if solde < PRIX_ABONNEMENT:
             return False, f"Fonds insuffisants ({solde}$ / {PRIX_ABONNEMENT}$)."
 
-        # 2. Déduction de l'argent [cite: 55]
-        # On met à jour le solde avant de changer le statut pour valider le paiement
         if not wallet_repository.update_solde(eid, solde - PRIX_ABONNEMENT):
             return False, "Erreur technique lors de la déduction du solde."
 
-        # 3. Mise à jour du statut Premium dans la table Etudiants [cite: 53]
         if not user_repository.devenir_premium_db(eid):
-            # En cas d'échec ici, on devrait idéalement rembourser l'étudiant
             return False, "Paiement effectué, mais erreur lors de l'activation du statut."
 
-        # 4. Historique dans la table Abonnements (Crucial pour la cohérence BD) [cite: 31, 32]
-        # Cette étape garantit que ta table SQL Abonnements est bien peuplée
         if not user_repository.enregistrer_abonnement(eid, PRIX_ABONNEMENT):
             return False, "Premium activé, mais erreur d'enregistrement dans l'historique."
 
         return True, "Abonnement Premium activé avec succès !"
 
     except Exception as e:
-        # Exigence 8 : Attraper les cas d'erreurs inattendus pour éviter le crash 
         print(f" Erreur critique achat premium : {e}")
         return False, "Une erreur technique est survenue sur le serveur."
 
@@ -78,7 +70,6 @@ def deposer_argent(eid, montant):
     if not wallet:
         return False, "Portefeuille introuvable"
 
-    # On additionne l'ancien solde et le nouveau dépôt
     nouveau_solde = float(wallet['solde']) + float(montant)
     
     if wallet_repository.update_solde(eid, nouveau_solde):
@@ -98,17 +89,20 @@ def annuler_premium(eid):
         return True, "Abonnement Premium annulé."
     return False, "Erreur lors de l'annulation."
 
+def changer_mot_de_passe(eid, ancien_password, nouveau_password):
+    if not nouveau_password or len(nouveau_password) < 8:
+        return False, "Le nouveau mot de passe doit contenir au moins 8 caractères."
+    return user_repository.changer_mot_de_passe(eid, ancien_password, nouveau_password)
+
 def verifier_et_enregistrer_acces(eid, fid):
     try:
         user = user_repository.get_user_by_id(eid)
         if not user:
             return False, "Utilisateur introuvable."
 
-        # Premium → accès illimité, pas besoin d'enregistrer dans Acceder
         if user['premium'] == 1:
             return True, "Accès illimité Premium."
 
-        # Fichier déjà visité → accès gratuit, quota intact
         if user_repository.a_deja_accede(eid, fid):
             return True, "Fichier déjà consulté."
 

@@ -3,7 +3,6 @@ from app.services import user_service
 
 wallet_bp = Blueprint('wallet_bp', __name__)
 
-# Route pour CONSULTER le solde (Ex: GET /api/wallet/3)
 @wallet_bp.route('/api/wallet/<int:eid>', methods=['GET'])
 def voir_wallet(eid):
     wallet, message = user_service.obtenir_portefeuille(eid)
@@ -11,7 +10,6 @@ def voir_wallet(eid):
         return jsonify({"status": "success", "wallet": wallet}), 200
     return jsonify({"status": "error", "message": message}), 404
 
-# Route pour DÉPOSER de l'argent (Ex: POST /api/wallet/depot)
 @wallet_bp.route('/api/wallet/depot', methods=['POST'])
 def ajouter_fonds():
     data = request.json
